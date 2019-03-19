@@ -10,7 +10,7 @@ import scalismo.registration.{LandmarkRegistration, RigidTransformation, Rotatio
 import scalismo.ui.api.ScalismoUI
 
 
-object ExampleApp {
+object RigidAlignment {
 
   def main(args: Array[String]) {
 
