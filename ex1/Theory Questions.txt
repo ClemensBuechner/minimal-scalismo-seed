@@ -1,0 +1,14 @@
+3.1 a)
+Smaller, as the scaling would represent another dimension of variability.
+
+3.1 b)
+Variability in shapes decreases as we use less shapes in our model. We can no longer differentiate between shapes of left and right hans.
+
+3.2
+The points lie in a straight line. This is because the rank of the covariance matrix is 1, meaning all Eigenvectors point in the same direction.
+
+3.3
+We sum over z*z' which is a matrix of rank 1, leading to a rank n matrix. However, as the sum has to be 0 (constraint given by the covariance), one is linearly dependant. Therefore, the overall rank of the resulting matrix is n-1.
+
+3.4
+This would be sufficient.
