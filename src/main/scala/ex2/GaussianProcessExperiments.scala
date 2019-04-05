@@ -6,7 +6,6 @@ import scalismo.common._
 import scalismo.geometry.{EuclideanVector, Point, _3D}
 import scalismo.io.MeshIO
 import scalismo.kernels.{DiagonalKernel, GaussianKernel, MatrixValuedPDKernel}
-import scalismo.mesh.TriangleMesh
 import scalismo.statisticalmodel.{DiscreteLowRankGaussianProcess, GaussianProcess, StatisticalMeshModel}
 import scalismo.ui.api.ScalismoUI
 import scalismo.utils.Random
