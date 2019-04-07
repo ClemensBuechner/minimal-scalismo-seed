@@ -1,5 +1,6 @@
 package femurProject
 
+import java.awt.Color
 import java.io.File
 
 import scalismo.common._
@@ -13,12 +14,12 @@ import scalismo.utils.Random
 
 object FemurReconstruction {
 
+  scalismo.initialize()
+  val ui = ScalismoUI()
+
   def main(args: Array[String]): Unit = {
 
     implicit val rng: Random = scalismo.utils.Random(42)
-
-    scalismo.initialize()
-    val ui = ScalismoUI()
 
     val model = computeModel()
     ui.show(model, "mean")
@@ -26,38 +27,61 @@ object FemurReconstruction {
 
   def computeModel(): StatisticalMeshModel = {
 
+    // load data from which the model is generated
     val ref = MeshIO.readMesh(new File("datasets/femur.stl")).get
     val refLMs = LandmarkIO.readLandmarksJson[_3D](new File("datasets/femur.json")).get
-    val refLMpts = landmarksToPoints(refLMs)
+    val refLMpts: IndexedSeq[Point[_3D]] = landmarksToPoints(refLMs)
 
     val files = new File("data/femora/aligned/").listFiles()
     val dataset = files.map { f => MeshIO.readMesh(f).get }
     val lmsFiles = new File("data/femora/alignedLandmarks/").listFiles()
     val lms = lmsFiles.map { f => LandmarkIO.readLandmarksJson[_3D](f).get }
 
-    val defFields = dataset.indices.map { i: Int =>
-      val warpedRef = warpMesh(ref, refLMpts, landmarksToPoints(lms(i)))
-      val defField = computeDeformationField(dataset(i), warpedRef)
+    // compute deformation fields and interpolate continuous vector field from it
+    val defFields = /*(0 until 5)*/ dataset.indices.map { i: Int =>
+      //      val data = ui.show(dataset(i), "femora" + i)
+      //      val warp = ui.show(warpedRef, "warp" + i)
+      //      data.color = Color.ORANGE
+      //      warp.color = Color.GREEN
+
+      val ptIds = (0 until dataset(i).pointSet.numberOfPoints by 50).map { i: Int => PointId(i) } // TODO: play with value
+      val defField = computeDeformationField((ref, refLMpts), (dataset(i),
+        landmarksToPoints(lms(i))), ptIds)
       println("generated deformation " + (i + 1) + " of " + dataset.length)
       defField
     }
 
     val interpolator = NearestNeighborInterpolator[_3D, EuclideanVector[_3D]]()
-    val contiuousField = defFields.map(f => f.interpolate(interpolator))
-    val gp = DiscreteLowRankGaussianProcess.createUsingPCA(ref.pointSet, contiuousField)
+    val continuousField = defFields.map(f => f.interpolate(interpolator))
+    val gp = DiscreteLowRankGaussianProcess.createUsingPCA(ref.pointSet, continuousField)
     StatisticalMeshModel(ref, gp.interpolate(interpolator))
   }
 
-  def computeDeformationField(mesh1: TriangleMesh3D, mesh2: TriangleMesh3D): DiscreteField[_3D,
+  def computeDeformationField(instance: (TriangleMesh3D, IndexedSeq[Point[_3D]]), target:
+  (TriangleMesh3D, IndexedSeq[Point[_3D]]), ptIds: Seq[PointId]): DiscreteField[_3D,
     UnstructuredPointsDomain[_3D], EuclideanVector[_3D]] = {
 
-    val ids = (0 until mesh1.pointSet.numberOfPoints by 50).map(i => PointId(i))
-    val aligned: TriangleMesh[_3D] = ICPRigidAlign(mesh1, mesh2, ids, 150)
-    val deformationVectors = aligned.pointSet.points.map { p: Point[_3D] =>
-      p - mesh2.pointSet.findClosestPoint(p).point
+    val t = ui.show(target._1, "target")
+    val o = ui.show(instance._1, "original")
+    t.color = Color.GREEN
+    o.color = Color.RED
+
+    val warp = warpMesh(instance._1, instance._2, target._2)
+    val ids = (0 until instance._1.pointSet.numberOfPoints by 50).map(i => PointId(i))
+    val aligned: TriangleMesh[_3D] = ICPRigidAlign(warp, target._1, ids, 80)
+    val icp = ui.show(aligned, "icp instance")
+
+    val deformationVectors = aligned.pointSet.pointIds.map { id: PointId =>
+      val orig = instance._1.pointSet.point(id)
+      val alig = aligned.pointSet.point(id)
+      target._1.pointSet.findClosestPoint(alig).point - orig
     }.toIndexedSeq
 
-    DiscreteField[_3D, UnstructuredPointsDomain[_3D], EuclideanVector[_3D]](mesh1.pointSet,
+    Thread.sleep(1000)
+    icp.remove()
+    o.remove()
+    t.remove()
+    DiscreteField[_3D, UnstructuredPointsDomain[_3D], EuclideanVector[_3D]](instance._1.pointSet,
       deformationVectors)
   }
 
@@ -100,6 +124,12 @@ object FemurReconstruction {
       val transform = LandmarkRegistration.rigid3DLandmarkRegistration(correspondences,
         center = Point(0, 0, 0))
       val transformed = movingMesh.transform(transform)
+
+//      if (numberOfIterations % 10 == 0) {
+//        val instance = ui.show(transformed, "icp inistance")
+//        Thread.sleep(2000)
+//        instance.remove()
+//      }
 
       ICPRigidAlign(transformed, staticMesh, ptIds, numberOfIterations - 1)
     }
