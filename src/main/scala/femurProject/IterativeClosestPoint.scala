@@ -8,6 +8,7 @@ import scalismo.registration.LandmarkRegistration
 import scalismo.statisticalmodel.{MultivariateNormalDistribution, StatisticalMeshModel}
 
 object IterativeClosestPoint {
+
   def ICPRigidAlign(movingMesh: TriangleMesh3D, staticMesh: TriangleMesh3D, ptIds: Seq[PointId],
                     numberOfIterations: Int): TriangleMesh3D = {
 
