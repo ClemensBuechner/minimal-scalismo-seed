@@ -12,6 +12,8 @@ import scalismo.numerics.UniformMeshSampler3D
 import scalismo.statisticalmodel.{DiscreteLowRankGaussianProcess, GaussianProcess, LowRankGaussianProcess, StatisticalMeshModel}
 import scalismo.ui.api.ScalismoUI
 import scalismo.utils.Random
+
+import scala.io.StdIn
 ;
 
 object FemurReconstruction {
@@ -37,14 +39,14 @@ object FemurReconstruction {
     val model = shapeModelFromKernel(reference, kernel)
     println("Generated shape model from kernel.")
 
-    val sampler = UniformMeshSampler3D(model.referenceMesh, numberOfPoints = 10000)
+    val sampler = UniformMeshSampler3D(model.referenceMesh, numberOfPoints = 8000)
     val points = sampler.sample().map { pointWithProbability => pointWithProbability._1 }
     val pointIds = points.map { pt => model.referenceMesh.pointSet.findClosestPoint(pt).id }
     println("Finished sampling points on the mesh.")
 
     val referenceLMpts: IndexedSeq[Point[_3D]] = landmarksToPoints(referenceLandmarks)
-    val defFields = targets.indices.map { i: Int =>
-//    val defFields = (0 until 5).map { i: Int =>
+//    val defFields = targets.indices.map { i: Int =>
+    val defFields = (0 until 5).map { i: Int =>
       val targetLMpts = landmarksToPoints(targetLandmarks(i))
       val defField = computeDeformationField(reference, referenceLMpts, targets(i), targetLMpts,
         model, pointIds)
@@ -78,7 +80,7 @@ object FemurReconstruction {
     val zeroMean = Field(RealSpace[_3D], (_: Point[_3D]) => EuclideanVector(0, 0, 0))
     val gp = GaussianProcess(zeroMean, kernel)
     val lowRankGP = LowRankGaussianProcess.approximateGPCholesky(referenceMesh.pointSet, gp,
-      0.1, NearestNeighborInterpolator()) // TODO: change tolerance to smaller value
+      0.01, NearestNeighborInterpolator()) // TODO: change tolerance to smaller value
     StatisticalMeshModel(referenceMesh, lowRankGP)
   }
 
@@ -102,23 +104,23 @@ object FemurReconstruction {
                               model: StatisticalMeshModel, ptIds: IndexedSeq[PointId])
   : DiscreteField[_3D, UnstructuredPointsDomain[_3D], EuclideanVector[_3D]] = {
 
-//    val movingView = ui.show(moving, "moving")
-//    movingView.color = Color.GREEN
-//    val targetView = ui.show(target, "target")
+    val movingView = ui.show(moving, "moving")
+    movingView.color = Color.GREEN
+    val targetView = ui.show(target, "target")
     val warpedMovingMesh = warpMesh(moving, movingLandmarks, targetLandmarks)
     val aligned = IterativeClosestPoint.nonrigidICP(warpedMovingMesh, target, model, ptIds,
       150) //
     // TODO: play with the number of iterations
-//    val alignedView = ui.show(aligned, "aligned")
-//    alignedView.color = Color.RED
+    val alignedView = ui.show(aligned, "aligned")
+    alignedView.color = Color.RED
     val deformationVectors = moving.pointSet.pointIds.map { id: PointId =>
       aligned.pointSet.point(id) - moving.pointSet.point(id)
     }.toIndexedSeq
 
-//    Thread.sleep(10000)
-//    targetView.remove()
-//    movingView.remove()
-//    alignedView.remove()
+    StdIn.readLine()
+    targetView.remove()
+    movingView.remove()
+    alignedView.remove()
 
     DiscreteField[_3D, UnstructuredPointsDomain[_3D], EuclideanVector[_3D]](moving.pointSet,
       deformationVectors)

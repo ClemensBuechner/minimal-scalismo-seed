@@ -25,9 +25,6 @@ object IterativeClosestPoint {
     }
   }
 
-  val noise = MultivariateNormalDistribution(DenseVector.zeros[Double](3),
-    DenseMatrix.eye[Double](3))
-
   def nonrigidICP(movingMesh: TriangleMesh3D, staticMesh: TriangleMesh3D,
                   model: StatisticalMeshModel, ptIds: Seq[PointId], numberOfIterations: Int)
   : TriangleMesh3D = {
@@ -35,7 +32,7 @@ object IterativeClosestPoint {
     if (numberOfIterations == 0) movingMesh
     else {
       val correspondences = attributeCorrespondences(movingMesh, staticMesh, ptIds)
-      val transformed = ModelFitting.fit(correspondences, model, noise)
+      val transformed = fit(correspondences, model)
 
       nonrigidICP(transformed, staticMesh, model, ptIds, numberOfIterations - 1)
     }
@@ -49,5 +46,18 @@ object IterativeClosestPoint {
       val closestPoint = staticMesh.pointSet.findClosestPoint(pt).point
       (id, closestPoint)
     }
+  }
+
+  val noise = MultivariateNormalDistribution(DenseVector.zeros[Double](3),
+    DenseMatrix.eye[Double](3))
+
+  def fit(correspondences: Seq[(PointId, Point[_3D])], model: StatisticalMeshModel)
+  : TriangleMesh3D = {
+
+    val regressionData = correspondences.map(correspondence =>
+      (correspondence._1, correspondence._2, noise)
+    )
+    val posterior = model.posterior(regressionData.toIndexedSeq)
+    posterior.mean
   }
 }
