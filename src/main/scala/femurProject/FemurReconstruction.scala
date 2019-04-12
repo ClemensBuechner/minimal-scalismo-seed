@@ -69,8 +69,10 @@ object FemurReconstruction {
       //      val targetView = ui.show(target, "target")
       //      val alignedView = ui.show(aligned, "aligned")
       //      alignedView.color = Color.RED
-      val dist = scalismo.mesh.MeshMetrics.avgDistance(deformation, target)
-      println("Average Distance: " + dist)
+      val dist = scalismo.mesh.MeshMetrics.avgDistance(aligned, target)
+      val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(aligned, target)
+      println("Average Distance: "+dist)
+      println("Hausdorff Distance: "+hausDist)
       MeshIO.writeMesh(deformation, new File("data/femora/deformations/" + i + ".stl"))
 
       val ids = reference.pointSet.pointIds.map { id => (id, id) }.toIndexedSeq
