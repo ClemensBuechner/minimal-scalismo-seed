@@ -9,7 +9,10 @@ import scalismo.io.{LandmarkIO, MeshIO}
 import scalismo.kernels.{DiagonalKernel, GaussianKernel, MatrixValuedPDKernel, PDKernel}
 import scalismo.mesh.TriangleMesh3D
 import scalismo.numerics.UniformMeshSampler3D
-import scalismo.statisticalmodel.{DiscreteLowRankGaussianProcess, GaussianProcess, LowRankGaussianProcess, StatisticalMeshModel}
+import scalismo.statisticalmodel.{
+  DiscreteLowRankGaussianProcess, GaussianProcess,
+  LowRankGaussianProcess, StatisticalMeshModel
+}
 import scalismo.ui.api.ScalismoUI
 import scalismo.utils.Random
 
@@ -35,31 +38,75 @@ object FemurReconstruction {
     val targetLandmarks = landmarkFiles.map { f => LandmarkIO.readLandmarksJson[_3D](f).get }
     println("Loaded dataset of targets.")
 
-    val kernel = createKernel(20.0, 20.0) + createKernel(25.0, 25.0) + createKernelScaled(100.0, 100.0)
+    val kernel = createKernel(25.0, 25.0) + createKernel(50.0, 50.0) + createKernelScaled(100.0, 100.0)
     val model = shapeModelFromKernel(reference, kernel)
     println("Generated shape model from kernel.")
 
-    val sampler = UniformMeshSampler3D(model.referenceMesh, numberOfPoints = 5000)
+    val sampler = UniformMeshSampler3D(model.referenceMesh, numberOfPoints = 8000)
     val points = sampler.sample().map { pointWithProbability => pointWithProbability._1 }
     val pointIds = points.map { pt => model.referenceMesh.pointSet.findClosestPoint(pt).id }
     println("Finished sampling points on the mesh.")
 
-    val referenceLMpts: IndexedSeq[Point[_3D]] = landmarksToPoints(referenceLandmarks)
-//    val defFields = targets.indices.map { i: Int =>
-    val defFields = (0 until 5).map { i: Int =>
+    val referenceLMpts = landmarksToPoints(referenceLandmarks)
+    val defFields = targets.indices.map { i: Int =>
+      //    val defFields = (0 until 10).map { i: Int =>
+      val target = targets(i)
       val targetLMpts = landmarksToPoints(targetLandmarks(i))
-      val defField = computeDeformationField(reference, referenceLMpts, targets(i), targetLMpts,
-        model, pointIds, i)
+
+      val warp = warpMesh(reference, referenceLMpts, targetLMpts)
+      val aligned = IterativeClosestPoint.nonrigidICP(warp, target, model, pointIds, 20)
+      // TODO: play with the number of iterations
+
+      //      val targetView = ui.show(target, "target")
+      //      val alignedView = ui.show(aligned, "aligned")
+      //      alignedView.color = Color.RED
+      val dist = scalismo.mesh.MeshMetrics.avgDistance(aligned, target)
+      println("Average Distance: "+dist)
+      MeshIO.writeMesh(aligned, new File("data/femora/aligned2/" + i + ".stl"))
+
+      val ids = reference.pointSet.pointIds.map { id => (id, id) }.toIndexedSeq
+      val defField = computeDeformationField(reference, aligned, ids)
+
+      //      StdIn.readLine()
+      //      targetView.remove()
+      //      alignedView.remove()
+
       println("Generated " + (i + 1) + " of " + targets.length + " deformation fields.")
       defField
     }
+    StdIn.readLine("Finished calculating model. Go on?")
 
     val interpolator = NearestNeighborInterpolator[_3D, EuclideanVector[_3D]]()
-    val continuousField = defFields.map(f => f.interpolate(interpolator))
+    val continuousField = defFields.map { f => f.interpolate(interpolator) }
     val gp = DiscreteLowRankGaussianProcess.createUsingPCA(reference.pointSet, continuousField)
     val finalModel = StatisticalMeshModel(reference, gp.interpolate(interpolator))
 
     ui.show(finalModel, "mean")
+    StdIn.readLine("Finished computing the reconstruction model.")
+
+    val partialFiles = new File("data/femora/partial/").listFiles()
+    val partials = partialFiles.map { f => MeshIO.readMesh(f).get }
+    println("Loaded dataset of partial bones.")
+
+    val referenceView = ui.show(reference, "reference")
+    partials.indices.map { i: Int =>
+      StdIn.readLine("Reconstruct first partial: press [enter].")
+      val sampler = UniformMeshSampler3D(partials(i), numberOfPoints = 3000)
+      val points = sampler.sample().map { pointWithProbability => pointWithProbability._1 }
+      val pointIds = points.map { pt => partials(i).pointSet.findClosestPoint(pt).id }
+      val aligned = IterativeClosestPoint.nonrigidICP(partials(i), reference, model, pointIds, 150)
+      val ids = pointIds.map { id =>
+        (reference.pointSet.findClosestPoint(aligned.pointSet.point(id)).id, id)
+      }.toIndexedSeq
+      val defField = computeDeformationField(reference, partials(i), ids)
+
+      val partialView = ui.show(aligned, "partial_aligned")
+      StdIn.readLine()
+      partialView.remove()
+
+      aligned
+    }
+    referenceView.remove()
   }
 
   def landmarksToPoints(lms: Seq[Landmark[_3D]]): IndexedSeq[Point[_3D]] = {
@@ -105,34 +152,15 @@ object FemurReconstruction {
     TriangleMesh3D(warpedPts, mesh.triangulation)
   }
 
-  def computeDeformationField(moving: TriangleMesh3D, movingLandmarks: IndexedSeq[Point[_3D]],
-                              target: TriangleMesh3D, targetLandmarks: IndexedSeq[Point[_3D]],
-                              model: StatisticalMeshModel, ptIds: IndexedSeq[PointId], i: Int)
-  : DiscreteField[_3D, UnstructuredPointsDomain[_3D], EuclideanVector[_3D]] = {
 
-//    val movingView = ui.show(moving, "moving")
-//    movingView.color = Color.GREEN
-    val targetView = ui.show(target, "target")
-    val warpedMovingMesh = warpMesh(moving, movingLandmarks, targetLandmarks)
-    val aligned = IterativeClosestPoint.nonrigidICP(warpedMovingMesh, target, model, ptIds,
-      50) //
-    // TODO: play with the number of iterations
-    val alignedView = ui.show(aligned, "aligned")
-    alignedView.color = Color.RED
-    val dist = scalismo.mesh.MeshMetrics.avgDistance(aligned, target)
-    println("Average Distance: "+dist)
-    MeshIO.writeMesh(aligned, new File("data/femora/aligned2/" + i + ".stl"))
+  def computeDeformationField(from: TriangleMesh3D, to: TriangleMesh3D, ids: IndexedSeq[(PointId,
+    PointId)]): DiscreteField[_3D, UnstructuredPointsDomain[_3D], EuclideanVector[_3D]] = {
 
-    val deformationVectors = moving.pointSet.pointIds.map { id: PointId =>
-      aligned.pointSet.point(id) - moving.pointSet.point(id)
+    val deformationVectors = ids.map { id =>
+      to.pointSet.point(id._2) - from.pointSet.point(id._1)
     }.toIndexedSeq
 
-    StdIn.readLine()
-    targetView.remove()
-//    movingView.remove()
-    alignedView.remove()
-
-    DiscreteField[_3D, UnstructuredPointsDomain[_3D], EuclideanVector[_3D]](moving.pointSet,
+    DiscreteField[_3D, UnstructuredPointsDomain[_3D], EuclideanVector[_3D]](from.pointSet,
       deformationVectors)
   }
 }
