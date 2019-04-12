@@ -5,7 +5,7 @@ import java.io.File
 
 import scalismo.common._
 import scalismo.geometry.{EuclideanVector, Landmark, Point, _3D}
-import scalismo.io.{LandmarkIO, MeshIO}
+import scalismo.io.{LandmarkIO, MeshIO, StatisticalModelIO}
 import scalismo.kernels.{DiagonalKernel, GaussianKernel, MatrixValuedPDKernel, PDKernel}
 import scalismo.mesh.TriangleMesh3D
 import scalismo.numerics.UniformMeshSampler3D
@@ -14,17 +14,16 @@ import scalismo.statisticalmodel.{
   LowRankGaussianProcess, StatisticalMeshModel
 }
 import scalismo.ui.api.ScalismoUI
-import scalismo.ui.model
 import scalismo.utils.Random
 
 import scala.io.StdIn
 
 object FemurReconstruction {
 
-  scalismo.initialize()
-  val ui = ScalismoUI()
-
   def main(args: Array[String]): Unit = {
+
+    scalismo.initialize()
+    val ui = ScalismoUI()
 
     implicit val rng: Random = scalismo.utils.Random(42)
 
@@ -42,6 +41,7 @@ object FemurReconstruction {
     val model = shapeModelFromKernel(reference, kernel)
     val kernelGroup = ui.createGroup("kernel model")
     val kernelModel = ui.show(kernelGroup, model, "kernel")
+    StatisticalModelIO.writeStatisticalMeshModel(model, new File("data/femora/kernelModel.h5"))
     println("Generated shape model from kernel.")
 
     val sampler = UniformMeshSampler3D(model.referenceMesh, numberOfPoints = 8000)
@@ -80,6 +80,8 @@ object FemurReconstruction {
     val continuousField = defFields.map { f => f.interpolate(interpolator) }
     val gp = DiscreteLowRankGaussianProcess.createUsingPCA(reference.pointSet, continuousField)
     val finalModel = StatisticalMeshModel(reference, gp.interpolate(interpolator))
+    StatisticalModelIO.writeStatisticalMeshModel(finalModel,
+      new File("data/femora/interpolatedModel.h5"))
 
     val modelGroup = ui.createGroup("gp from deformations")
     ui.show(modelGroup, finalModel, "mean")
