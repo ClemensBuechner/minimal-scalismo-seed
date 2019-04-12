@@ -17,7 +17,6 @@ import scalismo.ui.api.ScalismoUI
 import scalismo.utils.Random
 
 import scala.io.StdIn
-;
 
 object FemurReconstruction {
 
@@ -38,8 +37,11 @@ object FemurReconstruction {
     val targetLandmarks = landmarkFiles.map { f => LandmarkIO.readLandmarksJson[_3D](f).get }
     println("Loaded dataset of targets.")
 
-    val kernel = createKernel(25.0, 25.0) + createKernel(50.0, 50.0) + createKernelScaled(100.0, 100.0)
+    val kernel = createKernel(25.0, 25.0) + createKernelScaled(100.0, 500.0)
     val model = shapeModelFromKernel(reference, kernel)
+    val kernelGroup = ui.createGroup("kernel model")
+    val kernelModel = ui.show(kernelGroup, model, "kernel")
+    kernelModel.color = Color.ORANGE
     println("Generated shape model from kernel.")
 
     val sampler = UniformMeshSampler3D(model.referenceMesh, numberOfPoints = 8000)
@@ -48,24 +50,31 @@ object FemurReconstruction {
     println("Finished sampling points on the mesh.")
 
     val referenceLMpts = landmarksToPoints(referenceLandmarks)
-    val defFields = targets.indices.map { i: Int =>
-      //    val defFields = (0 until 10).map { i: Int =>
+    //    val defFields = targets.indices.map { i: Int =>
+    val defFields = (0 until 3).map { i: Int =>
       val target = targets(i)
       val targetLMpts = landmarksToPoints(targetLandmarks(i))
+      val lmCorrespondences = referenceLandmarks.indices.map { j: Int =>
+        val pt = referenceLandmarks(j).point
+        val id = reference.pointSet.findClosestPoint(pt).id
+        (id, targetLandmarks(i)(j).point)
+      }
 
       val warp = warpMesh(reference, referenceLMpts, targetLMpts)
-      val aligned = IterativeClosestPoint.nonrigidICP(warp, target, model, pointIds, 20)
+      val posterior = model.posterior(lmCorrespondences, 1)
+      val deformation = IterativeClosestPoint.nonrigidICP(reference, target, posterior, pointIds,
+        20)
       // TODO: play with the number of iterations
 
       //      val targetView = ui.show(target, "target")
       //      val alignedView = ui.show(aligned, "aligned")
       //      alignedView.color = Color.RED
-      val dist = scalismo.mesh.MeshMetrics.avgDistance(aligned, target)
-      println("Average Distance: "+dist)
-      MeshIO.writeMesh(aligned, new File("data/femora/aligned2/" + i + ".stl"))
+      val dist = scalismo.mesh.MeshMetrics.avgDistance(deformation, target)
+      println("Average Distance: " + dist)
+      MeshIO.writeMesh(deformation, new File("data/femora/deformations/" + i + ".stl"))
 
       val ids = reference.pointSet.pointIds.map { id => (id, id) }.toIndexedSeq
-      val defField = computeDeformationField(reference, aligned, ids)
+      val defField = computeDeformationField(reference, deformation, ids)
 
       //      StdIn.readLine()
       //      targetView.remove()
@@ -74,39 +83,43 @@ object FemurReconstruction {
       println("Generated " + (i + 1) + " of " + targets.length + " deformation fields.")
       defField
     }
-    StdIn.readLine("Finished calculating model. Go on?")
 
     val interpolator = NearestNeighborInterpolator[_3D, EuclideanVector[_3D]]()
     val continuousField = defFields.map { f => f.interpolate(interpolator) }
     val gp = DiscreteLowRankGaussianProcess.createUsingPCA(reference.pointSet, continuousField)
     val finalModel = StatisticalMeshModel(reference, gp.interpolate(interpolator))
 
-    ui.show(finalModel, "mean")
-    StdIn.readLine("Finished computing the reconstruction model.")
+    val modelGroup = ui.createGroup("gp from deformations")
+    ui.show(modelGroup, finalModel, "mean")
 
     val partialFiles = new File("data/femora/partial/").listFiles()
     val partials = partialFiles.map { f => MeshIO.readMesh(f).get }
     println("Loaded dataset of partial bones.")
 
-    val referenceView = ui.show(reference, "reference")
+    StdIn.readLine("Reconstruct first partial: press [enter].")
+    val partialGroup = ui.createGroup("partials")
     partials.indices.map { i: Int =>
-      StdIn.readLine("Reconstruct first partial: press [enter].")
+      val partialView = ui.show(partialGroup, partials(i), "partial")
+      partialView.color = Color.BLUE
+
       val sampler = UniformMeshSampler3D(partials(i), numberOfPoints = 3000)
       val points = sampler.sample().map { pointWithProbability => pointWithProbability._1 }
       val pointIds = points.map { pt => partials(i).pointSet.findClosestPoint(pt).id }
-      val aligned = IterativeClosestPoint.nonrigidICP(partials(i), reference, model, pointIds, 150)
-      val ids = pointIds.map { id =>
-        (reference.pointSet.findClosestPoint(aligned.pointSet.point(id)).id, id)
-      }.toIndexedSeq
-      val defField = computeDeformationField(reference, partials(i), ids)
 
-      val partialView = ui.show(aligned, "partial_aligned")
-      StdIn.readLine()
+      val aligned = IterativeClosestPoint.nonrigidICP(partials(i), finalModel.mean, finalModel,
+        pointIds, 150)
+      val ids = pointIds.map { id =>
+        (finalModel.mean.pointSet.findClosestPoint(aligned.pointSet.point(id)).id, id)
+      }.toIndexedSeq
+      //      val defField = computeDeformationField(reference, partials(i), ids)
+
+      val partialAlignedView = ui.show(partialGroup, aligned, "partial_aligned")
+      StdIn.readLine("Show next reconstruction.")
       partialView.remove()
+      partialAlignedView.remove()
 
       aligned
     }
-    referenceView.remove()
   }
 
   def landmarksToPoints(lms: Seq[Landmark[_3D]]): IndexedSeq[Point[_3D]] = {
@@ -133,7 +146,7 @@ object FemurReconstruction {
     val zeroMean = Field(RealSpace[_3D], (_: Point[_3D]) => EuclideanVector(0, 0, 0))
     val gp = GaussianProcess(zeroMean, kernel)
     val lowRankGP = LowRankGaussianProcess.approximateGPCholesky(referenceMesh.pointSet, gp,
-      0.01, NearestNeighborInterpolator()) // TODO: change tolerance to smaller value
+      0.1, NearestNeighborInterpolator()) // TODO: change tolerance to smaller value
     StatisticalMeshModel(referenceMesh, lowRankGP)
   }
 
