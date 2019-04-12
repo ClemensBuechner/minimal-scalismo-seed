@@ -38,11 +38,11 @@ object FemurReconstruction {
     val targetLandmarks = landmarkFiles.map { f => LandmarkIO.readLandmarksJson[_3D](f).get }
     println("Loaded dataset of targets.")
 
-    val kernel = createKernel(10.0, 50.0) + createKernel(100.0, 500.0)
+    val kernel = createKernel(25.0, 25.0) + createKernel(50.0, 50.0) + createKernelScaled(100.0, 100.0)
     val model = shapeModelFromKernel(reference, kernel)
     println("Generated shape model from kernel.")
 
-    val sampler = UniformMeshSampler3D(model.referenceMesh, numberOfPoints = 5000)
+    val sampler = UniformMeshSampler3D(model.referenceMesh, numberOfPoints = 8000)
     val points = sampler.sample().map { pointWithProbability => pointWithProbability._1 }
     val pointIds = points.map { pt => model.referenceMesh.pointSet.findClosestPoint(pt).id }
     println("Finished sampling points on the mesh.")
@@ -52,13 +52,17 @@ object FemurReconstruction {
       //    val defFields = (0 until 10).map { i: Int =>
       val target = targets(i)
       val targetLMpts = landmarksToPoints(targetLandmarks(i))
+
       val warp = warpMesh(reference, referenceLMpts, targetLMpts)
-      val aligned = IterativeClosestPoint.nonrigidICP(warp, target, model, pointIds, 150)
+      val aligned = IterativeClosestPoint.nonrigidICP(warp, target, model, pointIds, 20)
       // TODO: play with the number of iterations
 
       //      val targetView = ui.show(target, "target")
       //      val alignedView = ui.show(aligned, "aligned")
       //      alignedView.color = Color.RED
+      val dist = scalismo.mesh.MeshMetrics.avgDistance(aligned, target)
+      println("Average Distance: "+dist)
+      MeshIO.writeMesh(aligned, new File("data/femora/aligned2/" + i + ".stl"))
 
       val ids = reference.pointSet.pointIds.map { id => (id, id) }.toIndexedSeq
       val defField = computeDeformationField(reference, aligned, ids)
@@ -116,6 +120,12 @@ object FemurReconstruction {
     DiagonalKernel(gaussKernel, gaussKernel, gaussKernel)
   }
 
+  def createKernelScaled(s: Double, l: Double): DiagonalKernel[_3D] = {
+    val gaussKernel: PDKernel[_3D] = GaussianKernel(l) * s
+    val gaussKernel2: PDKernel[_3D] = GaussianKernel(l * 2) * 2 * s
+    DiagonalKernel(gaussKernel, gaussKernel, gaussKernel2)
+  }
+
   def shapeModelFromKernel(referenceMesh: TriangleMesh3D, kernel: MatrixValuedPDKernel[_3D])
   : StatisticalMeshModel = {
 
@@ -123,7 +133,7 @@ object FemurReconstruction {
     val zeroMean = Field(RealSpace[_3D], (_: Point[_3D]) => EuclideanVector(0, 0, 0))
     val gp = GaussianProcess(zeroMean, kernel)
     val lowRankGP = LowRankGaussianProcess.approximateGPCholesky(referenceMesh.pointSet, gp,
-      0.05, NearestNeighborInterpolator()) // TODO: change tolerance to smaller value
+      0.01, NearestNeighborInterpolator()) // TODO: change tolerance to smaller value
     StatisticalMeshModel(referenceMesh, lowRankGP)
   }
 
@@ -141,6 +151,7 @@ object FemurReconstruction {
 
     TriangleMesh3D(warpedPts, mesh.triangulation)
   }
+
 
   def computeDeformationField(from: TriangleMesh3D, to: TriangleMesh3D, ids: IndexedSeq[(PointId,
     PointId)]): DiscreteField[_3D, UnstructuredPointsDomain[_3D], EuclideanVector[_3D]] = {
