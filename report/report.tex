@@ -1,0 +1,94 @@
+\documentclass[10pt,letterpaper,draft,conference,compsoc,oneside]{IEEEtran}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{amsthm}
+
+%% --------------------------------------------
+%% packages
+%% --------------------------------------------
+\usepackage{xspace}
+\usepackage[ngerman, english]{babel}
+\usepackage{url}
+\usepackage{algorithm}
+\usepackage[noend]{algpseudocode}
+\usepackage{pgfplots}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+%% --------------------------------------------
+%% bibliography preamble
+%% --------------------------------------------
+\usepackage[natbib=true,style=ieee,backend=biber,urldate=long]{biblatex}
+\addbibresource{paper.bib}
+
+%% --------------------------------------------
+%% commands
+%% --------------------------------------------
+\newcommand{\etal}{~et~al.\xspace}
+\newcommand{\ie}{i.e.\xspace}
+
+%% --------------------------------------------
+%% theorems and environments
+%% --------------------------------------------
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+
+%% --------------------------------------------
+%% todo's
+%% --------------------------------------------
+\usepackage[colorinlistoftodos, textwidth=1cm]{todonotes} % add ",disable" in [] to remove all todos, missing figures and the todo list
+\newcommand{\todoEmpty}[2][]{\todo[inline, #1]{#2}}
+\newcommand{\todoMissing}[2][]{\todoEmpty[color=magenta!80, linecolor=magenta!80, #1]{Missing: #2}}
+\newcommand{\todoCheck}[2][]{\todoEmpty[color=red!80, linecolor=red!80, #1]{Check: #2}}
+\newcommand{\todoRevise}[2][]{\todoEmpty[color=orange!80, linecolor=orange!80, #1]{Revise: #2}}
+\newcommand{\todoCitation}[2][]{\todoEmpty[color=yellow!80, linecolor=yellow!80, #1]{Citation: #2}}
+\newcommand{\todoLanguage}[2][]{\todoEmpty[color=blue!40!white, linecolor=blue!40!white, #1]{Language: #2}}
+\newcommand{\todoQuestion}[2][]{\todoEmpty[color=green!80!white, linecolor=green!80!white, #1]{Question: #2}}
+\newcommand{\todoNote}[2][]{\todoEmpty[color=black!20!white, linecolor=black!20!white, #1]{Note: #2}}
+\newcommand{\todoFigure}[5]{\begin{figure}[#1]\centering\missingfigure[figwidth=#2]{#3}\caption{#4}\label{#5}\end{figure}}
+
+\begin{document}
+%% --------------------------------------------
+%% title information
+%% --------------------------------------------
+\title{Femur Reconstruction Using Statistical Shape Modelling}
+\author{
+	\IEEEauthorblockN{Ferdinand~Badenberg\IEEEauthorrefmark{1} and Clemens~Büchner\IEEEauthorrefmark{2}}
+	\IEEEauthorblockA{
+		University of Basel\\
+		Department~of~Mathematics~and~Computer~Science\\
+		Email:~\IEEEauthorrefmark{1}\href{mailto:ferdinand.badenberg@unibas.ch}{ferdinand.badenberg@unibas.ch}, \IEEEauthorrefmark{2}\href{mailto:clemens.buechner@unibas.ch}{clemens.buechner@unibas.ch}
+}}
+\maketitle
+\IEEEaftertitletext{\vspace{-1\baselineskip}}
+
+%% --------------------------------------------
+%% abstract
+%% --------------------------------------------
+\begin{abstract}
+	\input{./Sections/abstract}
+\end{abstract}
+
+%% --------------------------------------------
+%% main part of the paper
+%% --------------------------------------------
+\input{./Sections/introduction}
+\input{./Sections/background}
+\input{./Sections/methods}
+\input{./Sections/results}
+\input{./Sections/discussion}
+\input{./Sections/conclusion}
+
+%% --------------------------------------------
+%% bibliography
+%% --------------------------------------------
+\printbibliography
+
+%% --------------------------------------------
+%% appendices
+%% --------------------------------------------
+% no appendices
+
+\end{document}
