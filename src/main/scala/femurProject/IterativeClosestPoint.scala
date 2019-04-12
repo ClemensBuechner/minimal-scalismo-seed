@@ -38,6 +38,19 @@ object IterativeClosestPoint {
     }
   }
 
+  def partialICP(movingMesh: TriangleMesh3D, staticMesh: TriangleMesh3D,
+                 model: StatisticalMeshModel, ptIds: Seq[PointId], numberOfIterations: Int)
+  : TriangleMesh3D = {
+
+    if (numberOfIterations == 0) movingMesh
+    else {
+      val correspondences = partialCorrespondences(movingMesh, staticMesh, ptIds)
+      val transformed = fit(correspondences, model)
+
+      partialICP(transformed, staticMesh, model, ptIds, numberOfIterations - 1)
+    }
+  }
+
   def attributeCorrespondences(movingMesh: TriangleMesh3D, staticMesh: TriangleMesh3D,
                                ptIds: Seq[PointId]): Seq[(PointId, Point[_3D])] = {
 
@@ -45,6 +58,16 @@ object IterativeClosestPoint {
       val pt = movingMesh.pointSet.point(id)
       val closestPoint = staticMesh.pointSet.findClosestPoint(pt).point
       (id, closestPoint)
+    }
+  }
+
+  def partialCorrespondences(movingMesh: TriangleMesh3D, staticMesh: TriangleMesh3D,
+                             ptIds: Seq[PointId]): Seq[(PointId, Point[_3D])] = {
+
+    ptIds.map { id: PointId =>
+      val pt = staticMesh.pointSet.point(id)
+      val closestPointId = movingMesh.pointSet.findClosestPoint(pt).id
+      (closestPointId, pt)
     }
   }
 

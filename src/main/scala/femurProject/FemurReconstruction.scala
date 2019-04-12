@@ -91,15 +91,16 @@ object FemurReconstruction {
     StdIn.readLine("Reconstruct first partial: press [enter].")
     val partialGroup = ui.createGroup("partials")
     partials.indices.map { i: Int =>
-      val partialView = ui.show(partialGroup, partials(i), "partial")
-      partialView.color = Color.BLUE
 
       val sampler = UniformMeshSampler3D(partials(i), numberOfPoints = 3000)
       val points = sampler.sample().map { pointWithProbability => pointWithProbability._1 }
       val pointIds = points.map { pt => partials(i).pointSet.findClosestPoint(pt).id }
 
-      val aligned = IterativeClosestPoint.nonrigidICP(finalModel.mean, partials(i), finalModel,
-        pointIds, 150)
+      val partialView = ui.show(partialGroup, partials(i), "partial")
+      partialView.color = Color.BLUE
+      val aligned = IterativeClosestPoint.partialICP(finalModel.mean, partials(i), finalModel,
+        pointIds, 30)
+
       val ids = pointIds.map { id =>
         (finalModel.mean.pointSet.findClosestPoint(aligned.pointSet.point(id)).id, id)
       }.toIndexedSeq
