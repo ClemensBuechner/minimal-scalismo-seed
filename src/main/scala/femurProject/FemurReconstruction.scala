@@ -49,22 +49,30 @@ object FemurReconstruction {
 
     val referenceLMpts = landmarksToPoints(referenceLandmarks)
     val defFields = targets.indices.map { i: Int =>
-      //    val defFields = (0 until 10).map { i: Int =>
-      val target = targets(i)
-      val targetLMpts = landmarksToPoints(targetLandmarks(i))
+//          val defFields = (0 until 50).map { i: Int =>
+//      val target = targets(i)
+//      val targetLMpts = landmarksToPoints(targetLandmarks(i))
 
-      val warp = warpMesh(reference, referenceLMpts, targetLMpts)
-      val aligned = IterativeClosestPoint.nonrigidICP(warp, target, model, pointIds, 20)
+//      val warp = warpMesh(reference, referenceLMpts, targetLMpts)
+//      val lmCorrespondences = referenceLandmarks.indices.map { j: Int =>
+//      val pt = referenceLandmarks(j).point
+//      val id = reference.pointSet.findClosestPoint(pt).id
+//        (id, targetLandmarks(i)(j).point)
+//  }
+
+//  val posterior = model.posterior(lmCorrespondences, 1)
+//  val aligned = IterativeClosestPoint.nonrigidICP(reference, target, posterior, pointIds, 20)
       // TODO: play with the number of iterations
 
       //      val targetView = ui.show(target, "target")
       //      val alignedView = ui.show(aligned, "aligned")
       //      alignedView.color = Color.RED
-      val dist = scalismo.mesh.MeshMetrics.avgDistance(aligned, target)
-      val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(aligned, target)
-      println("Average Distance: "+dist)
-      println("Hausdorff Distance: "+hausDist)
-      MeshIO.writeMesh(aligned, new File("data/femora/alignedRegistration/" + i + ".stl"))
+//      val dist = scalismo.mesh.MeshMetrics.avgDistance(aligned, target)
+//      val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(aligned, target)
+//      println("Average Distance: "+dist)
+//      println("Hausdorff Distance: "+hausDist)
+//      MeshIO.writeMesh(aligned, new File("data/femora/alignedRegistration/" + i + ".stl"))
+      val aligned = MeshIO.readMesh(new File("data/femora/alignedWarp/" + i + ".stl")).get
 
       val ids = reference.pointSet.pointIds.map { id => (id, id) }.toIndexedSeq
       val defField = computeDeformationField(reference, aligned, ids)
@@ -93,18 +101,20 @@ object FemurReconstruction {
     val referenceView = ui.show(reference, "reference")
     partials.indices.map { i: Int =>
       StdIn.readLine("Reconstruct first partial: press [enter].")
+      val partialBoneView = ui.show(partials(i), "target")
       val sampler = UniformMeshSampler3D(partials(i), numberOfPoints = 3000)
       val points = sampler.sample().map { pointWithProbability => pointWithProbability._1 }
       val pointIds = points.map { pt => partials(i).pointSet.findClosestPoint(pt).id }
-      val aligned = IterativeClosestPoint.nonrigidICP(partials(i), reference, model, pointIds, 150)
+      val aligned = IterativeClosestPoint.nonrigidICP(reference,partials(i), model, pointIds, 20)
       val ids = pointIds.map { id =>
         (reference.pointSet.findClosestPoint(aligned.pointSet.point(id)).id, id)
       }.toIndexedSeq
       val defField = computeDeformationField(reference, partials(i), ids)
 
       val partialView = ui.show(aligned, "partial_aligned")
-      StdIn.readLine()
+      StdIn.readLine("Bone reconstructed.")
       partialView.remove()
+      partialBoneView.remove()
 
       aligned
     }
@@ -166,3 +176,4 @@ object FemurReconstruction {
       deformationVectors)
   }
 }
+
