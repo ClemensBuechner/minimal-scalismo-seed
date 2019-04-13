@@ -37,7 +37,7 @@ object FemurReconstruction {
     val targetLandmarks = landmarkFiles.map { f => LandmarkIO.readLandmarksJson[_3D](f).get }
     println("Loaded dataset of targets.")
 
-    val kernel = createKernel(25.0, 25.0) + createKernelScaled(100.0, 500.0)
+    val kernel = createKernelScaled(20.0, 50.0) + createKernel(50.0, 100.0) + createKernel(500, 1000) + createKernelScaled(500.0, 1000.0)
     val model = shapeModelFromKernel(reference, kernel)
     val kernelGroup = ui.createGroup("kernel model")
     val kernelModel = ui.show(kernelGroup, model, "kernel")
@@ -51,8 +51,8 @@ object FemurReconstruction {
 
     val referenceLMpts = landmarksToPoints(referenceLandmarks)
 
-    //    val defFields = targets.indices.map { i: Int =>
-    val defFields = (0 until 3).map { i: Int =>
+        val defFields = targets.indices.map { i: Int =>
+//    val defFields = (0 until 3).map { i: Int =>
       val target = targets(i)
       val targetLMpts = landmarksToPoints(targetLandmarks(i))
       val lmCorrespondences = referenceLandmarks.indices.map { j: Int =>
@@ -61,29 +61,29 @@ object FemurReconstruction {
         (id, targetLandmarks(i)(j).point)
       }
 
-      val warp = warpMesh(reference, referenceLMpts, targetLMpts)
+//      val warp = warpMesh(reference, referenceLMpts, targetLMpts)
       val posterior = model.posterior(lmCorrespondences, 1)
       val deformation = IterativeClosestPoint.nonrigidICP(reference, target, posterior, pointIds,
         20)
       // TODO: play with the number of iterations
 
-      //      val targetView = ui.show(target, "target")
-      //      val alignedView = ui.show(aligned, "aligned")
-      //      alignedView.color = Color.RED
+//            val targetView = ui.show(target, "target")
+//            val deformationView = ui.show(deformation, "deformation")
+//            deformation.color = Color.RED
 
       val dist = scalismo.mesh.MeshMetrics.avgDistance(deformation, target)
       val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(deformation, target)
       println("Average Distance: "+dist)
       println("Hausdorff Distance: "+hausDist)
-      MeshIO.writeMesh(deformation, new File("data/femora/deformations/" + i + ".stl"))
+      MeshIO.writeMesh(deformation, new File("data/femora/deformations/big" + i + ".ply"))
 //      val aligned = MeshIO.readMesh(new File("data/femora/alignedWarp/" + i + ".stl")).get
 
       val ids = reference.pointSet.pointIds.map { id => (id, id) }.toIndexedSeq
       val defField = computeDeformationField(reference, deformation, ids)
 
-      //      StdIn.readLine()
-      //      targetView.remove()
-      //      alignedView.remove()
+//            StdIn.readLine()
+//            targetView.remove()
+//            deformationView.remove()
 
       println("Generated " + (i + 1) + " of " + targets.length + " deformation fields.")
       defField
@@ -112,7 +112,7 @@ object FemurReconstruction {
       val points = sampler.sample().map { pointWithProbability => pointWithProbability._1 }
       val pointIds = points.map { pt => partials(i).pointSet.findClosestPoint(pt).id }
 
-      val aligned = IterativeClosestPoint.nonrigidICP(partials(i), finalModel.mean, finalModel,
+      val aligned = IterativeClosestPoint.nonrigidICP(finalModel.mean,partials(i), finalModel,
         pointIds, 150)
       val ids = pointIds.map { id =>
         (finalModel.mean.pointSet.findClosestPoint(aligned.pointSet.point(id)).id, id)
@@ -153,7 +153,7 @@ object FemurReconstruction {
     val zeroMean = Field(RealSpace[_3D], (_: Point[_3D]) => EuclideanVector(0, 0, 0))
     val gp = GaussianProcess(zeroMean, kernel)
     val lowRankGP = LowRankGaussianProcess.approximateGPCholesky(referenceMesh.pointSet, gp,
-      0.1, NearestNeighborInterpolator()) // TODO: change tolerance to smaller value
+      0.01, NearestNeighborInterpolator()) // TODO: change tolerance to smaller value
     StatisticalMeshModel(referenceMesh, lowRankGP)
   }
 
