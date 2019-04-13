@@ -5,7 +5,7 @@ import java.io.File
 
 import scalismo.common._
 import scalismo.geometry.{EuclideanVector, Landmark, Point, _3D}
-import scalismo.io.{LandmarkIO, MeshIO}
+import scalismo.io.{LandmarkIO, MeshIO, StatisticalModelIO}
 import scalismo.kernels.{DiagonalKernel, GaussianKernel, MatrixValuedPDKernel, PDKernel}
 import scalismo.mesh.TriangleMesh3D
 import scalismo.numerics.UniformMeshSampler3D
@@ -20,10 +20,10 @@ import scala.io.StdIn
 
 object FemurReconstruction {
 
-  scalismo.initialize()
-  val ui = ScalismoUI()
-
   def main(args: Array[String]): Unit = {
+
+    scalismo.initialize()
+    val ui = ScalismoUI()
 
     implicit val rng: Random = scalismo.utils.Random(42)
 
@@ -37,11 +37,12 @@ object FemurReconstruction {
     val targetLandmarks = landmarkFiles.map { f => LandmarkIO.readLandmarksJson[_3D](f).get }
     println("Loaded dataset of targets.")
 
-    val kernel = createKernelScaled(20.0, 50.0) + createKernel(50.0, 100.0) + createKernel(500, 1000) + createKernelScaled(500.0, 1000.0)
+    val kernel = createKernelScaled(5.0, 20.0) + createKernel(10.0, 50.0) + createKernel(500, 1000) + createKernelScaled(500.0, 1000.0)
     val model = shapeModelFromKernel(reference, kernel)
     val kernelGroup = ui.createGroup("kernel model")
     val kernelModel = ui.show(kernelGroup, model, "kernel")
-//    kernelModel.color = Color.ORANGE
+
+    StatisticalModelIO.writeStatisticalMeshModel(model, new File("data/femora/kernelModel.h5"))
     println("Generated shape model from kernel.")
 
     val sampler = UniformMeshSampler3D(model.referenceMesh, numberOfPoints = 8000)
@@ -49,43 +50,32 @@ object FemurReconstruction {
     val pointIds = points.map { pt => model.referenceMesh.pointSet.findClosestPoint(pt).id }
     println("Finished sampling points on the mesh.")
 
-    val referenceLMpts = landmarksToPoints(referenceLandmarks)
 
-        val defFields = targets.indices.map { i: Int =>
-//    val defFields = (0 until 3).map { i: Int =>
+    val registrationGroup = ui.createGroup("registration")
+    //    val defFields = targets.indices.map { i: Int =>
+    val defFields = (0 until 3).map { i: Int =>
       val target = targets(i)
-      val targetLMpts = landmarksToPoints(targetLandmarks(i))
-      val lmCorrespondences = referenceLandmarks.indices.map { j: Int =>
-        val pt = referenceLandmarks(j).point
-        val id = reference.pointSet.findClosestPoint(pt).id
-        (id, targetLandmarks(i)(j).point)
-      }
+      val registration = getRegistration("data/femora/deformations/test" + i + ".ply", model,
+        reference, referenceLandmarks, target, targetLandmarks(i), pointIds)
 
-//      val warp = warpMesh(reference, referenceLMpts, targetLMpts)
-      val posterior = model.posterior(lmCorrespondences, 1)
-      val deformation = IterativeClosestPoint.nonrigidICP(reference, target, posterior, pointIds,
-        20)
-      // TODO: play with the number of iterations
+      val targetView = ui.show(registrationGroup, target, "target")
+      val registrationView = ui.show(registrationGroup, registration, "aligned")
+      registrationView.color = Color.RED
 
-//            val targetView = ui.show(target, "target")
-//            val deformationView = ui.show(deformation, "deformation")
-//            deformation.color = Color.RED
 
-      val dist = scalismo.mesh.MeshMetrics.avgDistance(deformation, target)
-      val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(deformation, target)
-      println("Average Distance: "+dist)
-      println("Hausdorff Distance: "+hausDist)
-      MeshIO.writeMesh(deformation, new File("data/femora/deformations/big" + i + ".ply"))
-//      val aligned = MeshIO.readMesh(new File("data/femora/alignedWarp/" + i + ".stl")).get
+      val dist = scalismo.mesh.MeshMetrics.avgDistance(registration, target)
+      val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(registration, target)
+      println("Average Distance: " + dist)
+      println("Hausdorff Distance: " + hausDist)
 
       val ids = reference.pointSet.pointIds.map { id => (id, id) }.toIndexedSeq
-      val defField = computeDeformationField(reference, deformation, ids)
+      val defField = computeDeformationField(reference, registration, ids)
 
-//            StdIn.readLine()
-//            targetView.remove()
-//            deformationView.remove()
+      StdIn.readLine("Show next registration.")
+      targetView.remove()
+      registrationView.remove()
 
-      println("Generated " + (i + 1) + " of " + targets.length + " deformation fields.")
+      println("Generated " + (i + 1) + " of " + targets.length + " registration fields.")
       defField
     }
 
@@ -93,6 +83,8 @@ object FemurReconstruction {
     val continuousField = defFields.map { f => f.interpolate(interpolator) }
     val gp = DiscreteLowRankGaussianProcess.createUsingPCA(reference.pointSet, continuousField)
     val finalModel = StatisticalMeshModel(reference, gp.interpolate(interpolator))
+    StatisticalModelIO.writeStatisticalMeshModel(finalModel,
+      new File("data/femora/interpolatedModel.h5"))
 
     val modelGroup = ui.createGroup("gp from deformations")
     ui.show(modelGroup, finalModel, "mean")
@@ -105,15 +97,15 @@ object FemurReconstruction {
     val partialGroup = ui.createGroup("partials")
     partials.indices.map { i: Int =>
 
-      val partialView = ui.show(partialGroup, partials(i), "partial")
-      partialView.color = Color.BLUE
-
       val sampler = UniformMeshSampler3D(partials(i), numberOfPoints = 3000)
       val points = sampler.sample().map { pointWithProbability => pointWithProbability._1 }
       val pointIds = points.map { pt => partials(i).pointSet.findClosestPoint(pt).id }
 
-      val aligned = IterativeClosestPoint.nonrigidICP(finalModel.mean,partials(i), finalModel,
-        pointIds, 150)
+      val partialView = ui.show(partialGroup, partials(i), "partial")
+      partialView.color = Color.BLUE
+      val aligned = IterativeClosestPoint.partialICP(finalModel.mean, partials(i), finalModel,
+        pointIds, 30)
+
       val ids = pointIds.map { id =>
         (finalModel.mean.pointSet.findClosestPoint(aligned.pointSet.point(id)).id, id)
       }.toIndexedSeq
@@ -129,9 +121,36 @@ object FemurReconstruction {
     }
   }
 
+  def getRegistration(filename: String, model: StatisticalMeshModel, moving: TriangleMesh3D,
+                      movingLandmarks: Seq[Landmark[_3D]], target: TriangleMesh3D,
+                      targetLandmarks: Seq[Landmark[_3D]], ids: Seq[PointId]): TriangleMesh3D = {
+
+    val file: File = new File(filename)
+    val registration: TriangleMesh3D = {
+      if (file.exists()) {
+        println("Loading mesh from " + filename)
+        MeshIO.readMesh(file).get
+      } else {
+        println("Computing registration.")
+        val lmCorrespondences = movingLandmarks.indices.map { i: Int =>
+          val id = moving.pointSet.findClosestPoint(movingLandmarks(i).point).id
+          (id, targetLandmarks(i).point)
+        }
+        val posterior = model.posterior(lmCorrespondences, 1)
+        val registration = IterativeClosestPoint.nonrigidICP(moving, target, posterior, ids, 20)
+        // TODO: play with the number of iterations
+        MeshIO.writeMesh(registration, file)
+        registration
+      }
+    }
+    registration
+  }
+
   def landmarksToPoints(lms: Seq[Landmark[_3D]]): IndexedSeq[Point[_3D]] = {
 
-    lms.map { lm => lm.point }.toIndexedSeq
+    lms.map {
+      lm => lm.point
+    }.toIndexedSeq
   }
 
   def createKernel(s: Double, l: Double): DiagonalKernel[_3D] = {
@@ -160,13 +179,24 @@ object FemurReconstruction {
   def warpMesh(mesh: TriangleMesh3D, orig: IndexedSeq[Point[_3D]],
                target: IndexedSeq[Point[_3D]]): TriangleMesh3D = {
 
-    val vectors = orig.indices.map { i: Int => target(i) - orig(i) }
-    val warpedPts = mesh.pointSet.points.map { p =>
-      val dists = orig.map { o => (p - o).norm2 }
-      val distSum = dists.sum
-      val weights = dists.map { d => d / distSum }
-      val weightedVecs = vectors.indices.map { i: Int => vectors(i) * weights(i) }
-      p + weightedVecs.reduce { (a, b) => a + b }
+    val vectors = orig.indices.map {
+      i: Int => target(i) - orig(i)
+    }
+    val warpedPts = mesh.pointSet.points.map {
+      p =>
+        val dists = orig.map {
+          o => (p - o).norm2
+        }
+        val distSum = dists.sum
+        val weights = dists.map {
+          d => d / distSum
+        }
+        val weightedVecs = vectors.indices.map {
+          i: Int => vectors(i) * weights(i)
+        }
+        p + weightedVecs.reduce {
+          (a, b) => a + b
+        }
     }.toIndexedSeq
 
     TriangleMesh3D(warpedPts, mesh.triangulation)
@@ -176,8 +206,9 @@ object FemurReconstruction {
   def computeDeformationField(from: TriangleMesh3D, to: TriangleMesh3D, ids: IndexedSeq[(PointId,
     PointId)]): DiscreteField[_3D, UnstructuredPointsDomain[_3D], EuclideanVector[_3D]] = {
 
-    val deformationVectors = ids.map { id =>
-      to.pointSet.point(id._2) - from.pointSet.point(id._1)
+    val deformationVectors = ids.map {
+      id =>
+        to.pointSet.point(id._2) - from.pointSet.point(id._1)
     }.toIndexedSeq
 
     DiscreteField[_3D, UnstructuredPointsDomain[_3D], EuclideanVector[_3D]](from.pointSet,

@@ -6,10 +6,7 @@ import java.io.File
 import scalismo.geometry._
 import scalismo.io.{LandmarkIO, MeshIO}
 import scalismo.mesh.TriangleMesh
-import scalismo.registration.{
-  LandmarkRegistration, RigidTransformation, RotationTransform,
-  TranslationTransform
-}
+import scalismo.registration.{LandmarkRegistration, RigidTransformation}
 import scalismo.ui.api.ScalismoUI
 import scalismo.utils.Random
 
