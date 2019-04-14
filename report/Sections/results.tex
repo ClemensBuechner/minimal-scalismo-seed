@@ -1,2 +1,9 @@
 \section{Results}
 \todoMissing{write results}
+The implementation of our methods was done in scala using the scalismo framework \todoCitation{Scalismo}. The setting closely followed the guidelines provided by the the Sicas Medical Image Repository for their \todoCitation{FutureLearn: Statistical Shape Modelling} challenge. Accordingly, we used their dataset of 50 misaligned meshes of femur bones to train our model and subsequently their ten partial femur bones to test our model on. 
+
+For the evaluation of the results, we are interested in closely modelling the actual bone, meaning we want our reconstruction and the ground truth data (not given to us) to be as close as possible. This will be tested using both the average distance and the hausdorff distance between both meshes, both of which should ideally be as small as possible.
+
+While in the end we are only interested in the distance between our reconstruction and the ground truth, we can also use the average distance and the hausdorff distance as an indication of how closely we were able to fit our kernel model to the training data. In contrast to the previous distances, we are able to calculate these ourselves and hopefully, a better representation of our training data also leads to a better reconstruction of the partial bones. We provided these values in \todoCitation{KernelDistanceResults}.
+
+All ten images of the partial femur bones that were given alongside our reconstruction can be found in the appendix. Their average distance and hausdorff distance scores can be found in table \todoCitation{Reconstruction Scores} .
