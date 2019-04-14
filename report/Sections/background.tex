@@ -1,2 +1,27 @@
 \section{Background}
+\label{sec:background}
+
+This section provides some fundamental knowledge required to understand our implementations described in Section~\ref{sec:methods}.
+However, the theory will only be covered broadly, as it is described in-depth in the according online course~\citep{mooc2019statistical}.
+
+%% --------------------------------------------
+
+\subsection{Gaussian Process}
+\label{subsec:gp}
+
+\todoQuestion{Do we want / need that?}
+
+%% --------------------------------------------
+
+\subsection{Statistical Shape Model}
+\label{subsec:ssm}
+
+By analyzing a dataset of shapes of the same shape family we can build a statistical shape model (SSM).
+We assume that the variations in the available shapes originate in a set of normally distributed features.
+For each shape in the dataset, the deformation field to a corresponding reference shape is computed.
+From the deformation vectors, we can calcul ate the mean shape as well as a covariance matrix.
+With these two elements \todoRevise{replace word ``elements''} we can fully describe all shapes from the dataset as well as many more similar shapes.
+
+
+
 \todoMissing{write background, or maybe leave out because not required according to project intro slides}

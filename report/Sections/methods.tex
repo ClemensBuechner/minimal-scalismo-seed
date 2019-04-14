@@ -1,2 +1,33 @@
 \section{Methods}
+\label{sec:methods}
+
+This section guides you through the major steps of our pipeline to get from a set of complete femur meshes and a set of partial femur meshes to a set of complete reconstructions of the partial femurs.
+\todoQuestion{Maybe introduce Scalismo, \dots?}
+
+%% --------------------------------------------
+
+\subsection{Rigid Alignment}
+\label{subsec:rigid}
+
+In order for the SSM to be meaningful, we need our data to be aligned with the reference shape.
+In a first step, we rigidly aligned all targets \todoQuestion{Do we call them targets in this paper?} to the reference using a small set of landmarks also given in the data.
+By minimizing the mean squared error of the corresponding landmarks, we can to find a good approximation of equal orientation.
+Hereby, we maintain all shape information but get rid of differences caused by transformation and / or rotation of a shape.
+
+%% --------------------------------------------
+
+\subsection{Shape Registration}
+\label{subsec:registr}
+
+After having made sure that our femurs are oriented accordingly, our next goal was to find correspondence between them.
+As their mesh representations do not necessarily have the same amount of vertices, and, furthermore, we cannot be sure that the vertices with identical identifiers are at the same place on the mesh (\eg, the tip of the femur head), we need to establish which point on one mesh corresponds to which point on the other.
+The key idea here is to use a prior model \todoQuestion{right?} and apply it to sample from the reference towards a target mesh.
+As soon as the posterior \todoQuestion{right?} is close enough to the target, we can compute its deformation to the reference for a fixed set of points on the mesh.
+
+A simple algorithm to approximate a target mesh is the iterative closest point algorithm (ICP).
+It non-rigidly deforms a shape according to a SSM in an iterative manner.
+In our implementation, we stop as soon as it has converged with an error difference below a given threshold\todoQuestion{Do we still want to implement this?} or a fixed number of iterations has been reached.
+
+\todoMissing{}
+
 \todoMissing{write methods}
