@@ -38,13 +38,13 @@ object FemurReconstruction {
     println("Loaded dataset of targets.")
 
 
-    val kernel = createKernel((5, 5, 10), 20) + createUniformKernel(10, 50) +
-      createUniformKernel(50, 500) + createKernel((50, 50, 100), 500)
+    val kernel = createUniformKernel(5, 20) + createUniformKernel(10, 50) +
+      createUniformKernel(50, 200)
     val model = shapeModelFromKernel(reference, kernel)
     val kernelGroup = ui.createGroup("kernel model")
     val kernelModel = ui.show(kernelGroup, model, "kernel")
 
-    StatisticalModelIO.writeStatisticalMeshModel(model, new File("data/femora/kernelModelSmall2.h5"))
+    StatisticalModelIO.writeStatisticalMeshModel(model, new File("data/femora/kernelModeTest1.h5"))
     println("Generated shape model from kernel.")
 
     val sampler = UniformMeshSampler3D(model.referenceMesh, numberOfPoints = 8000)
@@ -54,10 +54,10 @@ object FemurReconstruction {
 
 
     val registrationGroup = ui.createGroup("registration")
-    //    val defFields = targets.indices.map { i: Int =>
-    val defFields = (0 until 3).map { i: Int =>
+        val defFields = targets.indices.map { i: Int =>
+//    val defFields = (0 until 3).map { i: Int =>
       val target = targets(i)
-      val registration = getRegistration("data/femora/deformations/small2" + i + ".ply", model,
+      val registration = getRegistration("data/femora/deformations/Test1" + i + ".ply", model,
         reference, referenceLandmarks, target, targetLandmarks(i), pointIds)
 
       val targetView = ui.show(registrationGroup, target, "target")
@@ -72,9 +72,9 @@ object FemurReconstruction {
       val ids = reference.pointSet.pointIds.map { id => (id, id) }.toIndexedSeq
       val defField = computeDeformationField(reference, registration, ids)
 
-      StdIn.readLine("Show next registration.")
-      targetView.remove()
-      registrationView.remove()
+//      StdIn.readLine("Show next registration.")
+//      targetView.remove()
+//      registrationView.remove()
 
       println("Generated " + (i + 1) + " of " + targets.length + " registration fields.")
       defField
@@ -85,7 +85,7 @@ object FemurReconstruction {
     val gp = DiscreteLowRankGaussianProcess.createUsingPCA(reference.pointSet, continuousField)
     val finalModel = StatisticalMeshModel(reference, gp.interpolate(interpolator))
     StatisticalModelIO.writeStatisticalMeshModel(finalModel,
-      new File("data/femora/interpolatedModelSmall2.h5"))
+      new File("data/femora/interpolatedModelTest1.h5"))
 
     val modelGroup = ui.createGroup("gp from deformations")
     ui.show(modelGroup, finalModel, "mean")
