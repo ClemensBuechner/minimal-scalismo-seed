@@ -9,7 +9,7 @@ import scalismo.statisticalmodel.{MultivariateNormalDistribution, StatisticalMes
 
 object IterativeClosestPoint {
 
-  val maxIterations = 30
+  val maxIterations = 50
 
   def ICPRigidAlign(movingMesh: TriangleMesh3D, staticMesh: TriangleMesh3D, ptIds: Seq[PointId],
                     numberOfIterations: Int): TriangleMesh3D = {
@@ -46,7 +46,7 @@ object IterativeClosestPoint {
 
       if (recursionDepth % 5 == 0) {
         val newError = scalismo.mesh.MeshMetrics.hausdorffDistance(transformed, staticMesh)
-        if (Math.abs(error - newError) < 1e-5) {
+        if (Math.abs(error - newError) < 1e-3) {
           println("ICP Converged after " + recursionDepth + " iterations.")
           movingMesh
         } else nonrigidICP(transformed, staticMesh, model, ptIds, newError, recursionDepth + 1)

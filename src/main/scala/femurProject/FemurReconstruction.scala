@@ -43,8 +43,8 @@ object FemurReconstruction {
     println("Loaded dataset of targets.")
 
     val model = getKernelModel("data/femora/kernelModel_" + testname + ".h5", reference)
-    val kernelGroup = ui.createGroup("kernel model")
-    val kernelModel = ui.show(kernelGroup, model, "kernel")
+//    val kernelGroup = ui.createGroup("kernel model")
+//    val kernelModel = ui.show(kernelGroup, model, "kernel")
 
     val sampler = UniformMeshSampler3D(model.referenceMesh, numberOfPoints = 8000)
     val points = sampler.sample().map { pointWithProbability => pointWithProbability._1 }
@@ -52,17 +52,16 @@ object FemurReconstruction {
     println("Finished sampling points on the mesh.")
 
 
-    val registrationGroup = ui.createGroup("registration")
-            val defFields = targets.indices.map { i: Int =>
-//    val defFields = (0 until 10).map { i: Int =>
+//    val registrationGroup = ui.createGroup("registration")
+    val defFields = targets.indices.map { i: Int =>
+      //    val defFields = (40 until 50).map { i: Int =>
       val target = targets(i)
-      println(files(i).getName)
       val registration = getRegistration("data/femora/deformations/" + testname + "_" + i +
         ".ply", model, reference, referenceLandmarks, target, targetLandmarks(i), pointIds)
 
-      val targetView = ui.show(registrationGroup, target, "target")
-      val registrationView = ui.show(registrationGroup, registration, "aligned")
-      registrationView.color = Color.RED
+      //      val targetView = ui.show(registrationGroup, target, "target")
+      //      val registrationView = ui.show(registrationGroup, registration, "aligned")
+      //      registrationView.color = Color.RED
 
       val dist = scalismo.mesh.MeshMetrics.avgDistance(registration, target)
       val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(registration, target)
@@ -87,14 +86,14 @@ object FemurReconstruction {
     StatisticalModelIO.writeStatisticalMeshModel(finalModel,
       new File("data/femora/interpolatedModel_" + testname + ".h5"))
 
-    val modelGroup = ui.createGroup("gp from deformations")
-    ui.show(modelGroup, finalModel, "mean")
+//    val modelGroup = ui.createGroup("gp from deformations")
+//    ui.show(modelGroup, finalModel, "mean")
 
-    val partialFiles = new File("data/femora/partial/").listFiles()
+    val partialFiles = new File("data/femora/partial/").listFiles().sorted
     val partials = partialFiles.map { f => MeshIO.readMesh(f).get }
     println("Loaded dataset of partial bones.")
 
-    StdIn.readLine("Reconstruct first partial: press [enter].")
+    //    StdIn.readLine("Reconstruct first partial: press [enter].")
     val partialGroup = ui.createGroup("partials")
     partials.indices.map { i: Int =>
 
@@ -112,9 +111,10 @@ object FemurReconstruction {
       }.toIndexedSeq
       //      val defField = computeDeformationField(reference, partials(i), ids)
 
-
       val partialAlignedView = ui.show(partialGroup, aligned, "partial_aligned")
-      StdIn.readLine("Show next reconstruction.")
+      println(partialFiles(i).getName)
+      MeshIO.writeMesh(aligned, new File("data/femora/reconstructions/" + i + ".ply"))
+      //      StdIn.readLine("Show next reconstruction.")
       partialView.remove()
       partialAlignedView.remove()
 
@@ -193,7 +193,7 @@ object FemurReconstruction {
     val zeroMean = Field(RealSpace[_3D], (_: Point[_3D]) => EuclideanVector(0, 0, 0))
     val gp = GaussianProcess(zeroMean, kernel)
     val lowRankGP = LowRankGaussianProcess.approximateGPCholesky(referenceMesh.pointSet, gp,
-      0.1, NearestNeighborInterpolator()) // TODO: change tolerance to smaller value
+      0.01, NearestNeighborInterpolator()) // TODO: change tolerance to smaller value
     StatisticalMeshModel(referenceMesh, lowRankGP)
   }
 
