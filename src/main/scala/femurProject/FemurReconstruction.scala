@@ -9,10 +9,7 @@ import scalismo.io.{LandmarkIO, MeshIO, StatisticalModelIO}
 import scalismo.kernels.{DiagonalKernel, GaussianKernel, MatrixValuedPDKernel, PDKernel}
 import scalismo.mesh.TriangleMesh3D
 import scalismo.numerics.UniformMeshSampler3D
-import scalismo.statisticalmodel.{
-  DiscreteLowRankGaussianProcess, GaussianProcess,
-  LowRankGaussianProcess, StatisticalMeshModel
-}
+import scalismo.statisticalmodel.{DiscreteLowRankGaussianProcess, GaussianProcess, LowRankGaussianProcess, StatisticalMeshModel}
 import scalismo.ui.api.ScalismoUI
 import scalismo.utils.Random
 
@@ -27,6 +24,8 @@ object FemurReconstruction {
 
     implicit val rng: Random = scalismo.utils.Random(42)
 
+    val testname = "Test1"
+
     val reference = MeshIO.readMesh(new File("datasets/femur.stl")).get
     val referenceLandmarks = LandmarkIO.readLandmarksJson[_3D](new File("datasets/femur.json")).get
     println("Loaded reference.")
@@ -37,7 +36,7 @@ object FemurReconstruction {
     val targetLandmarks = landmarkFiles.map { f => LandmarkIO.readLandmarksJson[_3D](f).get }
     println("Loaded dataset of targets.")
 
-    val model = getKernelModel("data/femora/kernelModelTest1.h5", reference)
+    val model = getKernelModel("data/femora/kernelModel_" + testname + ".h5", reference, testname)
     val kernelGroup = ui.createGroup("kernel model")
     val kernelModel = ui.show(kernelGroup, model, "kernel")
 
@@ -49,9 +48,10 @@ object FemurReconstruction {
 
     val registrationGroup = ui.createGroup("registration")
     //        val defFields = targets.indices.map { i: Int =>
-    val defFields = (0 until 20).map { i: Int =>
+    val defFields = (0 until 10).map { i: Int =>
       val target = targets(i)
-      val registration = getRegistration("data/femora/deformations/Test1" + i + ".ply", model,
+      println(files(i).getName())
+      val registration = getRegistration("data/femora/deformations/" + testname + "_" + i + ".ply", model,
         reference, referenceLandmarks, target, targetLandmarks(i), pointIds)
 
       val targetView = ui.show(registrationGroup, target, "target")
@@ -79,7 +79,7 @@ object FemurReconstruction {
     val gp = DiscreteLowRankGaussianProcess.createUsingPCA(reference.pointSet, continuousField)
     val finalModel = StatisticalMeshModel(reference, gp.interpolate(interpolator))
     StatisticalModelIO.writeStatisticalMeshModel(finalModel,
-      new File("data/femora/interpolatedModelTest1.h5"))
+      new File("data/femora/interpolatedModel_" + testname + ".h5"))
 
     val modelGroup = ui.createGroup("gp from deformations")
     ui.show(modelGroup, finalModel, "mean")
@@ -116,7 +116,7 @@ object FemurReconstruction {
     }
   }
 
-  def getKernelModel(filename: String, reference: TriangleMesh3D): StatisticalMeshModel = {
+  def getKernelModel(filename: String, reference: TriangleMesh3D, testname: String): StatisticalMeshModel = {
 
     val file = new File(filename)
     if (file.exists()) {
@@ -129,7 +129,7 @@ object FemurReconstruction {
       val model = shapeModelFromKernel(reference, kernel).truncate(100)
 
       StatisticalModelIO.writeStatisticalMeshModel(model, new File
-      ("data/femora/kernelModeTest1.h5"))
+      ("data/femora/kernelModel_" + testname + ".h5"))
       println("Generated shape model from kernel.")
       model
     }
