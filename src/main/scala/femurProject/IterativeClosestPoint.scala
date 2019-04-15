@@ -9,6 +9,8 @@ import scalismo.statisticalmodel.{MultivariateNormalDistribution, StatisticalMes
 
 object IterativeClosestPoint {
 
+  val maxIterations = 30
+
   def ICPRigidAlign(movingMesh: TriangleMesh3D, staticMesh: TriangleMesh3D, ptIds: Seq[PointId],
                     numberOfIterations: Int): TriangleMesh3D = {
 
@@ -26,28 +28,44 @@ object IterativeClosestPoint {
   }
 
   def nonrigidICP(movingMesh: TriangleMesh3D, staticMesh: TriangleMesh3D,
-                  model: StatisticalMeshModel, ptIds: Seq[PointId], numberOfIterations: Int)
-  : TriangleMesh3D = {
+                  model: StatisticalMeshModel, ptIds: Seq[PointId]): TriangleMesh3D = {
 
-    if (numberOfIterations == 0) movingMesh
+    nonrigidICP(movingMesh, staticMesh, model, ptIds, 1000, 0)
+  }
+
+  def nonrigidICP(movingMesh: TriangleMesh3D, staticMesh: TriangleMesh3D,
+                  model: StatisticalMeshModel, ptIds: Seq[PointId], error: Double,
+                  recursionDepth: Int): TriangleMesh3D = {
+
+    if (recursionDepth > maxIterations) movingMesh
     else {
       val correspondences = attributeCorrespondences(movingMesh, staticMesh, ptIds)
       val transformed = fit(correspondences, model)
 
-      nonrigidICP(transformed, staticMesh, model, ptIds, numberOfIterations - 1)
+      val newError = scalismo.mesh.MeshMetrics.hausdorffDistance(transformed, staticMesh)
+      if (Math.abs(error - newError) < 1e-5) movingMesh
+      else nonrigidICP(transformed, staticMesh, model, ptIds, newError, recursionDepth + 1)
     }
   }
 
   def partialICP(movingMesh: TriangleMesh3D, staticMesh: TriangleMesh3D,
-                 model: StatisticalMeshModel, ptIds: Seq[PointId], numberOfIterations: Int)
-  : TriangleMesh3D = {
+                 model: StatisticalMeshModel, ptIds: Seq[PointId]): TriangleMesh3D = {
 
-    if (numberOfIterations == 0) movingMesh
+    partialICP(movingMesh, staticMesh, model, ptIds, 1000, 0)
+  }
+
+  def partialICP(movingMesh: TriangleMesh3D, staticMesh: TriangleMesh3D,
+                 model: StatisticalMeshModel, ptIds: Seq[PointId], error: Double,
+                 recursionDepth: Int): TriangleMesh3D = {
+
+    if (recursionDepth > maxIterations) movingMesh
     else {
       val correspondences = partialCorrespondences(movingMesh, staticMesh, ptIds)
       val transformed = fit(correspondences, model)
 
-      partialICP(transformed, staticMesh, model, ptIds, numberOfIterations - 1)
+      val newError = scalismo.mesh.MeshMetrics.hausdorffDistance(transformed, staticMesh)
+      if (Math.abs(error - newError) < 1e-5) movingMesh
+      else partialICP(transformed, staticMesh, model, ptIds, newError, recursionDepth + 1)
     }
   }
 
