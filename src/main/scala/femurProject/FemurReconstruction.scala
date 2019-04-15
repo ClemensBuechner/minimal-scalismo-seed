@@ -37,10 +37,10 @@ object FemurReconstruction {
     val targetLandmarks = landmarkFiles.map { f => LandmarkIO.readLandmarksJson[_3D](f).get }
     println("Loaded dataset of targets.")
 
-
     val kernel = createUniformKernel(5, 20) + createUniformKernel(10, 50) +
       createUniformKernel(50, 200)
     val model = shapeModelFromKernel(reference, kernel)
+    model.truncate(100)
     val kernelGroup = ui.createGroup("kernel model")
     val kernelModel = ui.show(kernelGroup, model, "kernel")
 
@@ -105,7 +105,7 @@ object FemurReconstruction {
       val partialView = ui.show(partialGroup, partials(i), "partial")
       partialView.color = Color.BLUE
       val aligned = IterativeClosestPoint.partialICP(finalModel.mean, partials(i), finalModel,
-        pointIds, 30)
+        pointIds)
 
       val ids = pointIds.map { id =>
         (finalModel.mean.pointSet.findClosestPoint(aligned.pointSet.point(id)).id, id)
@@ -138,7 +138,7 @@ object FemurReconstruction {
           (id, targetLandmarks(i).point)
         }
         val posterior = model.posterior(lmCorrespondences, 1)
-        val registration = IterativeClosestPoint.nonrigidICP(moving, target, posterior, ids, 20)
+        val registration = IterativeClosestPoint.nonrigidICP(moving, target, posterior, ids)
         // TODO: play with the number of iterations
         MeshIO.writeMesh(registration, file)
         registration
