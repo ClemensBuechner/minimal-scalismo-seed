@@ -2,7 +2,14 @@
 \label{sec:methods}
 
 This section guides you through the major steps of our pipeline to get from a set of complete femur meshes and a set of partial femur meshes to a set of complete reconstructions of the partial femurs.
-\todoQuestion{Maybe introduce Scalismo, \dots?}
+
+%% --------------------------------------------
+
+\subsection{General Overview}
+\label{subsec:overview}
+The implementation of our methods was done in scala using the scalismo framework ~\cite{scalismo}.
+The procedure closely followed the guidelines provided by the the Sicas Medical Image Repository for their Futurelearn challenge ~\cite{smir}. 
+Accordingly, we used their dataset of 50 misaligned meshes of femur bones to train our model and subsequently their ten partial femur bones to test our model on. 
 
 %% --------------------------------------------
 
@@ -45,6 +52,6 @@ Due to the fact, that it is meaningless to find points closest to missing parts 
 
 As the mean shape is the most probable one in a SSM, we use it as the reconstruction of the partial shape.
 We have no other measure to estimate the proximity to the ground truth, as it is not provided in the data.
-The evaluation from the SICAS repository \todoCitation{} is provided in Section \todoMissing{reference}.
+The evaluation from the SICAS repository is provided in Section ~\ref{subsec:reconresults}.
 
 \todoMissing{write methods}
