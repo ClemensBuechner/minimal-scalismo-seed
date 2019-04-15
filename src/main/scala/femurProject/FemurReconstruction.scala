@@ -9,7 +9,8 @@ import scalismo.io.{LandmarkIO, MeshIO, StatisticalModelIO}
 import scalismo.kernels.{DiagonalKernel, GaussianKernel, MatrixValuedPDKernel, PDKernel}
 import scalismo.mesh.TriangleMesh3D
 import scalismo.numerics.UniformMeshSampler3D
-import scalismo.statisticalmodel.{DiscreteLowRankGaussianProcess, GaussianProcess, LowRankGaussianProcess, StatisticalMeshModel}
+import scalismo.statisticalmodel.{DiscreteLowRankGaussianProcess, GaussianProcess,
+  LowRankGaussianProcess, StatisticalMeshModel}
 import scalismo.ui.api.ScalismoUI
 import scalismo.utils.Random
 
@@ -30,9 +31,12 @@ object FemurReconstruction {
     val referenceLandmarks = LandmarkIO.readLandmarksJson[_3D](new File("datasets/femur.json")).get
     println("Loaded reference.")
 
-    val files = new File("data/femora/aligned/").listFiles().sorted
-    val targets = files.map { f => MeshIO.readMesh(f).get }
-    val landmarkFiles = new File("data/femora/alignedLandmarks/").listFiles().sorted
+    val files = (0 until 50).map { i: Int => new File("data/femora/aligned/" + i + ".ply") }
+    val targets = files.map { f => MeshIO.readMesh(f).get
+    }
+    val landmarkFiles = files.indices.map { i: Int =>
+      new File("data/femora/alignedLandmarks/" + i + ".json")
+    }
     val targetLandmarks = landmarkFiles.map { f => LandmarkIO.readLandmarksJson[_3D](f).get }
     println("Loaded dataset of targets.")
 
@@ -50,8 +54,9 @@ object FemurReconstruction {
     //        val defFields = targets.indices.map { i: Int =>
     val defFields = (0 until 10).map { i: Int =>
       val target = targets(i)
-      println(files(i).getName())
-      val registration = getRegistration("data/femora/deformations/" + testname + "_" + i + ".ply", model,
+      println(files(i).getName)
+      val registration = getRegistration("data/femora/deformations/" + testname + "_" + i + "" +
+        ".ply", model,
         reference, referenceLandmarks, target, targetLandmarks(i), pointIds)
 
       val targetView = ui.show(registrationGroup, target, "target")
@@ -116,7 +121,8 @@ object FemurReconstruction {
     }
   }
 
-  def getKernelModel(filename: String, reference: TriangleMesh3D, testname: String): StatisticalMeshModel = {
+  def getKernelModel(filename: String, reference: TriangleMesh3D, testname: String)
+  : StatisticalMeshModel = {
 
     val file = new File(filename)
     if (file.exists()) {
