@@ -17,7 +17,7 @@ Accordingly, we used their dataset of 50 misaligned meshes of femur bones to tra
 \label{subsec:rigid}
 
 In order for the SSM to be meaningful, we need our data to be aligned with the reference shape.
-In a first step, we rigidly aligned all targets \todoQuestion{Do we call them targets in this paper?} to the reference using a small set of landmarks also given in the data.
+In a first step, we rigidly aligned all bones given as part of the training data set to the reference using a small set of landmarks also given in the data.
 By minimizing the mean squared error of the corresponding landmarks, we can to find a good approximation of equal orientation.
 Hereby, we maintain all shape information but get rid of differences caused by transformation and / or rotation of a shape.
 
@@ -36,7 +36,7 @@ A simple way of approximating a target mesh is the \emph{iterative closest point
 It non-rigidly deforms a shape according to a SSM in an iterative manner.
 It searches for the points on the target mesh which are closest to a set of sample points on the deformation of the last iteration.
 These points are in turn used to compute the posterior \todoQuestion{right?} shape.
-In our implementation, we stop as soon as the change of the deformation in two consecutive iterations has fallen below a given threshold\todoQuestion{Do we still want to implement this?} or a fixed number of iterations has been reached.
+In our implementation, we stop as soon as the change of the deformation in two consecutive iterations has fallen below a given threshold or a fixed number of iterations has been reached.
 
 \todoMissing{}
 
