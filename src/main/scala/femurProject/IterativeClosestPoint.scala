@@ -63,7 +63,7 @@ object IterativeClosestPoint {
                  recursionDepth: Int): TriangleMesh3D = {
 
     if (recursionDepth > maxIterations) {
-      println("ICP reacht maximal recurison depth.")
+      println("ICP reached maximal recursion depth.")
       movingMesh
     } else {
       val correspondences = partialCorrespondences(movingMesh, staticMesh, ptIds)

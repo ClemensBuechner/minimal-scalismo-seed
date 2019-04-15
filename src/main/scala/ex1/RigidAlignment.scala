@@ -45,7 +45,7 @@ object RigidAlignment {
           .pointSet.point(id))
       }
 
-      MeshIO.writeMesh(alignedFemur, new File("data/femora/aligned/" + x + ".stl"))
+      MeshIO.writeMesh(alignedFemur, new File("data/femora/aligned/" + x + ".ply"))
       LandmarkIO.writeLandmarksJson[_3D](alignedLM, new File("data/femora/alignedLandmarks/" + x
         + ".json"))
 
