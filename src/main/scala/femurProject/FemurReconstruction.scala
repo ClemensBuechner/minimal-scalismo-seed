@@ -31,21 +31,15 @@ object FemurReconstruction {
     val referenceLandmarks = LandmarkIO.readLandmarksJson[_3D](new File("datasets/femur.json")).get
     println("Loaded reference.")
 
-    val files = new File("data/femora/aligned/").listFiles()
+    val files = new File("data/femora/aligned/").listFiles().sorted
     val targets = files.map { f => MeshIO.readMesh(f).get }
-    val landmarkFiles = new File("data/femora/alignedLandmarks/").listFiles()
+    val landmarkFiles = new File("data/femora/alignedLandmarks/").listFiles().sorted
     val targetLandmarks = landmarkFiles.map { f => LandmarkIO.readLandmarksJson[_3D](f).get }
     println("Loaded dataset of targets.")
 
-    val kernel = createUniformKernel(5, 20) + createUniformKernel(10, 50) +
-      createUniformKernel(50, 200)
-    val model = shapeModelFromKernel(reference, kernel)
-    model.truncate(100)
+    val model = getKernelModel("data/femora/kernelModelTest1.h5", reference)
     val kernelGroup = ui.createGroup("kernel model")
     val kernelModel = ui.show(kernelGroup, model, "kernel")
-
-    StatisticalModelIO.writeStatisticalMeshModel(model, new File("data/femora/kernelModeTest1.h5"))
-    println("Generated shape model from kernel.")
 
     val sampler = UniformMeshSampler3D(model.referenceMesh, numberOfPoints = 8000)
     val points = sampler.sample().map { pointWithProbability => pointWithProbability._1 }
@@ -54,8 +48,8 @@ object FemurReconstruction {
 
 
     val registrationGroup = ui.createGroup("registration")
-        val defFields = targets.indices.map { i: Int =>
-//    val defFields = (0 until 3).map { i: Int =>
+    //        val defFields = targets.indices.map { i: Int =>
+    val defFields = (0 until 20).map { i: Int =>
       val target = targets(i)
       val registration = getRegistration("data/femora/deformations/Test1" + i + ".ply", model,
         reference, referenceLandmarks, target, targetLandmarks(i), pointIds)
@@ -72,9 +66,9 @@ object FemurReconstruction {
       val ids = reference.pointSet.pointIds.map { id => (id, id) }.toIndexedSeq
       val defField = computeDeformationField(reference, registration, ids)
 
-//      StdIn.readLine("Show next registration.")
-//      targetView.remove()
-//      registrationView.remove()
+      //      StdIn.readLine("Show next registration.")
+      //      targetView.remove()
+      //      registrationView.remove()
 
       println("Generated " + (i + 1) + " of " + targets.length + " registration fields.")
       defField
@@ -103,7 +97,7 @@ object FemurReconstruction {
       val pointIds = points.map { pt => partials(i).pointSet.findClosestPoint(pt).id }
 
       val partialView = ui.show(partialGroup, partials(i), "partial")
-      partialView.color = Color.BLUE
+      partialView.color = Color.GREEN
       val aligned = IterativeClosestPoint.partialICP(finalModel.mean, partials(i), finalModel,
         pointIds)
 
@@ -119,6 +113,25 @@ object FemurReconstruction {
       partialAlignedView.remove()
 
       aligned
+    }
+  }
+
+  def getKernelModel(filename: String, reference: TriangleMesh3D): StatisticalMeshModel = {
+
+    val file = new File(filename)
+    if (file.exists()) {
+      val model = StatisticalModelIO.readStatisticalMeshModel(file).get
+      println("Loaded shape model.")
+      model
+    } else {
+      val kernel = createUniformKernel(5, 20) + createUniformKernel(10, 50) +
+        createUniformKernel(50, 200)
+      val model = shapeModelFromKernel(reference, kernel).truncate(100)
+
+      StatisticalModelIO.writeStatisticalMeshModel(model, new File
+      ("data/femora/kernelModeTest1.h5"))
+      println("Generated shape model from kernel.")
+      model
     }
   }
 

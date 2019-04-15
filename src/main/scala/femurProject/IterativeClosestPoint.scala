@@ -37,14 +37,18 @@ object IterativeClosestPoint {
                   model: StatisticalMeshModel, ptIds: Seq[PointId], error: Double,
                   recursionDepth: Int): TriangleMesh3D = {
 
-    if (recursionDepth > maxIterations) movingMesh
-    else {
+    if (recursionDepth > maxIterations) {
+      println("ICP reacht maximal recurison depth.")
+      movingMesh
+    } else {
       val correspondences = attributeCorrespondences(movingMesh, staticMesh, ptIds)
       val transformed = fit(correspondences, model)
 
       val newError = scalismo.mesh.MeshMetrics.hausdorffDistance(transformed, staticMesh)
-      if (Math.abs(error - newError) < 1e-5) movingMesh
-      else nonrigidICP(transformed, staticMesh, model, ptIds, newError, recursionDepth + 1)
+      if (Math.abs(error - newError) < 1e-5) {
+        println("ICP Converged after " + recursionDepth + " iterations.")
+        movingMesh
+      } else nonrigidICP(transformed, staticMesh, model, ptIds, newError, recursionDepth + 1)
     }
   }
 
@@ -58,14 +62,18 @@ object IterativeClosestPoint {
                  model: StatisticalMeshModel, ptIds: Seq[PointId], error: Double,
                  recursionDepth: Int): TriangleMesh3D = {
 
-    if (recursionDepth > maxIterations) movingMesh
-    else {
+    if (recursionDepth > maxIterations) {
+      println("ICP reacht maximal recurison depth.")
+      movingMesh
+    } else {
       val correspondences = partialCorrespondences(movingMesh, staticMesh, ptIds)
       val transformed = fit(correspondences, model)
 
       val newError = scalismo.mesh.MeshMetrics.hausdorffDistance(transformed, staticMesh)
-      if (Math.abs(error - newError) < 1e-5) movingMesh
-      else partialICP(transformed, staticMesh, model, ptIds, newError, recursionDepth + 1)
+      if (Math.abs(error - newError) < 1e-5) {
+        println("ICP Converged after " + recursionDepth + " iterations.")
+        movingMesh
+      } else partialICP(transformed, staticMesh, model, ptIds, newError, recursionDepth + 1)
     }
   }
 
