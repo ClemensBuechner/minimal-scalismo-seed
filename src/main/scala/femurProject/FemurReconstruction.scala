@@ -36,7 +36,7 @@ object FemurReconstruction {
     val targetLandmarks = landmarkFiles.map { f => LandmarkIO.readLandmarksJson[_3D](f).get }
     println("Loaded dataset of targets.")
 
-    val model = getKernelModel("data/femora/kernelModel_" + testname + ".h5", reference, testname)
+    val model = getKernelModel("data/femora/kernelModel_" + testname + ".h5", reference)
     val kernelGroup = ui.createGroup("kernel model")
     val kernelModel = ui.show(kernelGroup, model, "kernel")
 
@@ -47,7 +47,7 @@ object FemurReconstruction {
 
 
     val registrationGroup = ui.createGroup("registration")
-    //        val defFields = targets.indices.map { i: Int =>
+            val defFields = targets.indices.map { i: Int =>
     val defFields = (0 until 10).map { i: Int =>
       val target = targets(i)
       println(files(i).getName())
@@ -79,7 +79,7 @@ object FemurReconstruction {
     val gp = DiscreteLowRankGaussianProcess.createUsingPCA(reference.pointSet, continuousField)
     val finalModel = StatisticalMeshModel(reference, gp.interpolate(interpolator))
     StatisticalModelIO.writeStatisticalMeshModel(finalModel,
-      new File("data/femora/interpolatedModel_" + testname + ".h5"))
+      new File("data/femora/interpolatedModel_\" + testname + \".h5\"))
 
     val modelGroup = ui.createGroup("gp from deformations")
     ui.show(modelGroup, finalModel, "mean")
@@ -116,7 +116,7 @@ object FemurReconstruction {
     }
   }
 
-  def getKernelModel(filename: String, reference: TriangleMesh3D, testname: String): StatisticalMeshModel = {
+  def getKernelModel(filename: String, reference: TriangleMesh3D): StatisticalMeshModel = {
 
     val file = new File(filename)
     if (file.exists()) {
@@ -128,8 +128,7 @@ object FemurReconstruction {
         createUniformKernel(50, 200)
       val model = shapeModelFromKernel(reference, kernel).truncate(100)
 
-      StatisticalModelIO.writeStatisticalMeshModel(model, new File
-      ("data/femora/kernelModel_" + testname + ".h5"))
+      StatisticalModelIO.writeStatisticalMeshModel(model, file)
       println("Generated shape model from kernel.")
       model
     }
