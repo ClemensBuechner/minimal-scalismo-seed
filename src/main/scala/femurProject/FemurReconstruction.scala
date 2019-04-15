@@ -42,7 +42,7 @@ object FemurReconstruction {
     val targetLandmarks = landmarkFiles.map { f => LandmarkIO.readLandmarksJson[_3D](f).get }
     println("Loaded dataset of targets.")
 
-    val model = getKernelModel("data/femora/kernelModel_" + testname + ".h5", reference, testname)
+    val model = getKernelModel("data/femora/kernelModel_" + testname + ".h5", reference)
     val kernelGroup = ui.createGroup("kernel model")
     val kernelModel = ui.show(kernelGroup, model, "kernel")
 
@@ -53,8 +53,8 @@ object FemurReconstruction {
 
 
     val registrationGroup = ui.createGroup("registration")
-    //        val defFields = targets.indices.map { i: Int =>
-    val defFields = (0 until 10).map { i: Int =>
+            val defFields = targets.indices.map { i: Int =>
+//    val defFields = (0 until 10).map { i: Int =>
       val target = targets(i)
       println(files(i).getName)
       val registration = getRegistration("data/femora/deformations/" + testname + "_" + i +
@@ -122,8 +122,8 @@ object FemurReconstruction {
     }
   }
 
-  def getKernelModel(filename: String, reference: TriangleMesh3D, testname: String)
-  : StatisticalMeshModel = {
+  def getKernelModel(filename: String, reference: TriangleMesh3D): StatisticalMeshModel = {
+
 
     val file = new File(filename)
     if (file.exists()) {
@@ -193,7 +193,7 @@ object FemurReconstruction {
     val zeroMean = Field(RealSpace[_3D], (_: Point[_3D]) => EuclideanVector(0, 0, 0))
     val gp = GaussianProcess(zeroMean, kernel)
     val lowRankGP = LowRankGaussianProcess.approximateGPCholesky(referenceMesh.pointSet, gp,
-      0.01, NearestNeighborInterpolator()) // TODO: change tolerance to smaller value
+      0.1, NearestNeighborInterpolator()) // TODO: change tolerance to smaller value
     StatisticalMeshModel(referenceMesh, lowRankGP)
   }
 
