@@ -9,8 +9,10 @@ import scalismo.io.{LandmarkIO, MeshIO, StatisticalModelIO}
 import scalismo.kernels.{DiagonalKernel, GaussianKernel, MatrixValuedPDKernel, PDKernel}
 import scalismo.mesh.TriangleMesh3D
 import scalismo.numerics.UniformMeshSampler3D
-import scalismo.statisticalmodel.{DiscreteLowRankGaussianProcess, GaussianProcess,
-  LowRankGaussianProcess, StatisticalMeshModel}
+import scalismo.statisticalmodel.{
+  DiscreteLowRankGaussianProcess, GaussianProcess,
+  LowRankGaussianProcess, StatisticalMeshModel
+}
 import scalismo.ui.api.ScalismoUI
 import scalismo.utils.Random
 
@@ -55,9 +57,8 @@ object FemurReconstruction {
     val defFields = (0 until 10).map { i: Int =>
       val target = targets(i)
       println(files(i).getName)
-      val registration = getRegistration("data/femora/deformations/" + testname + "_" + i + "" +
-        ".ply", model,
-        reference, referenceLandmarks, target, targetLandmarks(i), pointIds)
+      val registration = getRegistration("data/femora/deformations/" + testname + "_" + i +
+        ".ply", model, reference, referenceLandmarks, target, targetLandmarks(i), pointIds)
 
       val targetView = ui.show(registrationGroup, target, "target")
       val registrationView = ui.show(registrationGroup, registration, "aligned")
@@ -134,8 +135,7 @@ object FemurReconstruction {
         createUniformKernel(50, 200)
       val model = shapeModelFromKernel(reference, kernel).truncate(100)
 
-      StatisticalModelIO.writeStatisticalMeshModel(model, new File
-      ("data/femora/kernelModel_" + testname + ".h5"))
+      StatisticalModelIO.writeStatisticalMeshModel(model, file)
       println("Generated shape model from kernel.")
       model
     }
