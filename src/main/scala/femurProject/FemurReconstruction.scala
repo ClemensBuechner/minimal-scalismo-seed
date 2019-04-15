@@ -37,7 +37,8 @@ object FemurReconstruction {
     val targetLandmarks = landmarkFiles.map { f => LandmarkIO.readLandmarksJson[_3D](f).get }
     println("Loaded dataset of targets.")
 
-    val kernel = createKernelScaled(5.0, 20.0) + createKernel(10.0, 50.0) + createKernel(500, 1000) + createKernelScaled(500.0, 1000.0)
+    val kernel = createKernel((5, 5, 10), 20) + createUniformKernel(10, 50) +
+      createUniformKernel(50, 500) + createKernel((50, 50, 100), 500)
     val model = shapeModelFromKernel(reference, kernel)
     val kernelGroup = ui.createGroup("kernel model")
     val kernelModel = ui.show(kernelGroup, model, "kernel")
@@ -61,7 +62,6 @@ object FemurReconstruction {
       val targetView = ui.show(registrationGroup, target, "target")
       val registrationView = ui.show(registrationGroup, registration, "aligned")
       registrationView.color = Color.RED
-
 
       val dist = scalismo.mesh.MeshMetrics.avgDistance(registration, target)
       val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(registration, target)
@@ -153,16 +153,17 @@ object FemurReconstruction {
     }.toIndexedSeq
   }
 
-  def createKernel(s: Double, l: Double): DiagonalKernel[_3D] = {
+  def createUniformKernel(s: Double, l: Double): DiagonalKernel[_3D] = {
 
     val gaussKernel: PDKernel[_3D] = GaussianKernel(l) * s
     DiagonalKernel(gaussKernel, gaussKernel, gaussKernel)
   }
 
-  def createKernelScaled(s: Double, l: Double): DiagonalKernel[_3D] = {
-    val gaussKernel: PDKernel[_3D] = GaussianKernel(l) * s
-    val gaussKernel2: PDKernel[_3D] = GaussianKernel(l * 2) * 2 * s
-    DiagonalKernel(gaussKernel, gaussKernel, gaussKernel2)
+  def createKernel(s: (Double, Double, Double), l: Double): DiagonalKernel[_3D] = {
+    val gaussKernelX: PDKernel[_3D] = GaussianKernel(l) * s._1
+    val gaussKernelY: PDKernel[_3D] = GaussianKernel(l) * s._2
+    val gaussKernelZ: PDKernel[_3D] = GaussianKernel(l) * s._3
+    DiagonalKernel(gaussKernelX, gaussKernelY, gaussKernelZ)
   }
 
   def shapeModelFromKernel(referenceMesh: TriangleMesh3D, kernel: MatrixValuedPDKernel[_3D])
