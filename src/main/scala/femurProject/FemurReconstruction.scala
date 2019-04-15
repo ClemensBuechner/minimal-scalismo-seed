@@ -37,12 +37,12 @@ object FemurReconstruction {
     val targetLandmarks = landmarkFiles.map { f => LandmarkIO.readLandmarksJson[_3D](f).get }
     println("Loaded dataset of targets.")
 
-    val kernel = createKernelScaled(5.0, 20.0) + createKernel(10.0, 50.0) + createKernel(500, 1000) + createKernelScaled(500.0, 1000.0)
+    val kernel = createKernel(5.0, 20.0) + createKernel(10, 50) + createKernel(100.0, 200.0) +createKernelScaled(500.0, 1000.0)
     val model = shapeModelFromKernel(reference, kernel)
     val kernelGroup = ui.createGroup("kernel model")
     val kernelModel = ui.show(kernelGroup, model, "kernel")
 
-    StatisticalModelIO.writeStatisticalMeshModel(model, new File("data/femora/kernelModel.h5"))
+    StatisticalModelIO.writeStatisticalMeshModel(model, new File("data/femora/kernelModelSmall2.h5"))
     println("Generated shape model from kernel.")
 
     val sampler = UniformMeshSampler3D(model.referenceMesh, numberOfPoints = 8000)
@@ -55,7 +55,7 @@ object FemurReconstruction {
     //    val defFields = targets.indices.map { i: Int =>
     val defFields = (0 until 3).map { i: Int =>
       val target = targets(i)
-      val registration = getRegistration("data/femora/deformations/test" + i + ".ply", model,
+      val registration = getRegistration("data/femora/deformations/small2" + i + ".ply", model,
         reference, referenceLandmarks, target, targetLandmarks(i), pointIds)
 
       val targetView = ui.show(registrationGroup, target, "target")
@@ -84,7 +84,7 @@ object FemurReconstruction {
     val gp = DiscreteLowRankGaussianProcess.createUsingPCA(reference.pointSet, continuousField)
     val finalModel = StatisticalMeshModel(reference, gp.interpolate(interpolator))
     StatisticalModelIO.writeStatisticalMeshModel(finalModel,
-      new File("data/femora/interpolatedModel.h5"))
+      new File("data/femora/interpolatedModelSmall2.h5"))
 
     val modelGroup = ui.createGroup("gp from deformations")
     ui.show(modelGroup, finalModel, "mean")
@@ -97,7 +97,7 @@ object FemurReconstruction {
     val partialGroup = ui.createGroup("partials")
     partials.indices.map { i: Int =>
 
-      val sampler = UniformMeshSampler3D(partials(i), numberOfPoints = 3000)
+      val sampler = UniformMeshSampler3D(partials(i), numberOfPoints = 8000)
       val points = sampler.sample().map { pointWithProbability => pointWithProbability._1 }
       val pointIds = points.map { pt => partials(i).pointSet.findClosestPoint(pt).id }
 
