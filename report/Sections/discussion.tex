@@ -1,6 +1,5 @@
 \section{Discussion}
 \label{sec:discussion}
-\todoMissing{write discussion}
 Overall, the results show that our procedure worked and we managed to model reconstructions of the partial femur bones. 
 At the time of writing, we are ranked 37 out of 54 on the SMIR challenge~\cite{smir}. 
 While we can see that the fundamentals are working properly, there is definitely room for improvement. 
@@ -17,7 +16,6 @@ Therefore, we thought that a combination of kernels with varying degrees of smoo
 Furthermore, we also considered using kernels with a higher scaling factor along the $z$-axis, which in this case would be the length of the bone. 
 However, in practice, we could not make out a meaningful difference for the results with such a scaled kernel and thus decided to stick to the uniform kernels.
 
-\todoRevise{Talk about late completion of the pipeline}
 Nonetheless, the kernel function is a part of the reconstruction process where there is a high degree of variability with many different kernel functions possible. 
 Unfortunately, testing the performance of the kernel functions in practice is a rather time consuming and difficult process.
 Not only do all the computations have to be redone for every new kernel, but also the performance evaluation is not very clear cut as we can not test the distances of our reconstruction to the ground truth for every new kernel.
@@ -50,8 +48,7 @@ As we did not have the necessary time, we could not try out these ideas any furt
 
 \todoQuestion{Why is the Hausdorff distance so large compared to the average distance?}
 As it stands, the fit of our model to the training data is certainly reasonable.
-However, this would likely be one of the major points where we could still see a lot of improvement for it.
-\todoRevise{Elaborate?}
+However, this would likely be one of the major points where the model could be improved.
 
 %% --------------------------------------------
 
