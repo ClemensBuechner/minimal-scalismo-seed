@@ -1,27 +1,27 @@
 \section{Results}
 \label{sec:results}
 
-\todoMissing{update results with correct values}
-
-%% --------------------------------------------
-
-\subsection{Kernel Function}
-\label{subsec:kernfunc}
-The kernel function we ended up using for our final result was the following: 
-\begin{equation}
-k(s, \sigma) = k(5, 20) + k(10, 50) + k(100, 200) + ks(200, 500)
-\end{equation}
-where $s$ is the scaling.
+In this section we present the outcome of our implementation.
+\todoRevise{update results with correct values}
 
 %% --------------------------------------------
 
 \subsection{Kernel Model}
 \label{subsec:kernmodel}
-\autoref{fig:kernel_model} shows mean of the the kernel model we generated with the above kernel.
+
+For constructing a model to register the data, we ended up using was the following: 
+$$ k(5, 20) + k(10, 50) + k(100, 200) + ks(200, 500) $$
+where $k(s, \sigma)$ is a diagonal kernel of Gaussian kernels with variance $\sigma$ scaled $s$. \todoRevise{I don't think this is still our kernel.}
+\autoref{fig:kernel_model} shows its outcome.
+The mean of the the kernel model is shown in orange.
+Alongside the mean, some samples drawn from its distribution are drawn, and show its variability.
+
 \begin{figure}
 	\centering
-  \includegraphics[scale=0.7]{./Figures/kernel_model}
-  \caption{Mean of the kernel model.}
+  \includegraphics[width=\columnwidth]{./Figures/kernel_model_samples}
+  \caption{
+    The mean of our kernel model shown in orange. 
+    It is accompanied by some random samples of the model.}
   \label{fig:kernel_model}
 \end{figure}
 

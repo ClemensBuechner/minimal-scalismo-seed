@@ -26,9 +26,14 @@
 %% --------------------------------------------
 %% commands
 %% --------------------------------------------
-\newcommand{\etal}{~et~al.\xspace}
 \newcommand{\ie}{i.e.\xspace}
 \newcommand{\eg}{e.g.\xspace}
+
+\makeatletter
+\def\@IEEEsectpunct{.\ \,}
+\def\paragraph{\@startsection{paragraph}{4}{\z@}{1.5ex plus 1.5ex minus 0.5ex}%
+{0ex}{\normalfont\normalsize\bfseries}}
+\makeatother
 
 %% --------------------------------------------
 %% theorems and environments

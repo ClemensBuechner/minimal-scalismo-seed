@@ -9,7 +9,10 @@ However, the theory will only be covered broadly, as it is described in-depth in
 \subsection{Gaussian Process}
 \label{subsec:gp}
 
-\todoQuestion{Do we want / need that?}
+According to \citeauthor{seeger2004gaussian}~\cite{seeger2004gaussian}, ``Gaussian processes (GPs) are natural generalisations of multivariate Gaussian random variables to infinite [\dots] index sets.''
+A GP is fully defined by a mean function $ \mu : \Omega \rightarrow \mathbb{R}^n $ and a covariance function $k : \Omega \times \Omega \rightarrow \mathbb{R}^{n \times n} $, where $\Omega$ is the domain and $n$ the dimensionality of the data~\citep{mooc2019statistical}.
+
+\todoRevise{Might be incomplete.}
 
 %% --------------------------------------------
 
@@ -22,6 +25,26 @@ For each shape in the dataset, the deformation field to a corresponding referenc
 From the deformation vectors, we can calculate the mean shape as well as a covariance matrix.
 With these, we can fully describe all shapes from the dataset as well as many more similar shapes.
 
+%% --------------------------------------------
 
+\subsection{Distance Metrics}
+\label{subsec:metrics}
 
-\todoMissing{write background, or maybe leave out because not required according to project intro slides}
+We estimate the accuracy of our model using two different distance measures.
+They value the difference between two meshes.
+Both metrics are also used for evaluating the final reconstructions in the SICAS competition~\cite{smir}.
+
+\paragraph{Average Distance}
+The average distance computes the average over all distances from every point on one mesh to its closest point on the other mesh:
+$$ \sum_{p \in M_1} \mathit{dist}_{M_2}(p) $$
+where $p \in M_1$ denotes a point $p$ on mesh $M_1$ and $\mathit{dist}_{M_2}$ is a function mapping a point to its minimal distance to mesh~$M_2$.
+
+\paragraph{Hausdorff Distance}
+Unlike the average distance, this metric computes the difference between two meshes in both directions.
+Two shapes are said to be close to each other, if the Hausdorff distance is low.
+The distance is calculated as follows~\cite{hausdorff}:
+$$ \max \left\{ \begin{array}{ll}
+  \sup_{p_1 \in M_1} \inf_{p_2 \in M_2} \mathit{dist}(p_1, p_2), \\
+  \sup_{p_2 \in M_2} \inf_{p_2 \in M_2} \mathit{dist}(p_1, p_2) 
+\end{array}\right\}. $$
+Informally, it describes the maximum over all shortest distances from each point on either mesh to get to the other mesh.
