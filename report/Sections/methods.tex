@@ -36,7 +36,7 @@ This procedure removes differences caused by translation and rotation of a shape
 \subsection{Shape Registration}
 \label{subsec:registr}
 
-\todoMissing{SSM from kernels}
+\todoMissing{SSM from kernels (würd ich fast einen satz zu sagen -F)}
 After having made sure that our femurs are oriented accordingly, our next goal was to find correspondence between them.
 As their mesh representations do not necessarily have the same amount of vertices, and, furthermore, we cannot be sure that the vertices with identical identifiers are at the same place on the mesh (\eg, the tip of the femur head), we need to establish which point on one mesh corresponds to which point on the other.
 
@@ -54,10 +54,10 @@ In our implementation, we stop as soon as the change of the deformation over fiv
 \subsection{Shape Reconstruction}
 \label{subsec:recon}
 
-Given the set of deformation fields based on the found deformations in the previous step, we built another SSM using \emph{principal component analysis} (PCA).
+Given the set of deformation fields which were based on the found deformations in the previous step, we built another SSM using \emph{principal component analysis} (PCA).
 On the basis of this model, we then went on estimating a sample that is as close to the parts available from our partial femur data.
 For this task, we again used ICP.
-Due to the fact, that it is meaningless to find points closest to missing parts of the femur, however, this time we did not sample points from the mesh deformed by the algorithm, but from the partial mesh.
+Due to the fact that it is meaningless to find points closest to missing parts of the femur, however, this time we did not sample points from the mesh deformed by the algorithm, but from the partial mesh.
 
 As the mean shape is the most probable one in a SSM, we use it as the reconstruction of the partial shape.
 We have no other measure to estimate the proximity to the ground truth, as it is not provided in the data.

@@ -2,24 +2,25 @@
 \label{sec:background}
 
 This section provides some fundamental knowledge required to understand our implementations described in Section~\ref{sec:methods}.
-However, the theory will only be covered broadly, as it is described in-depth in the according online course~\citep{mooc2019statistical}.
+However, the theory will only be covered broadly, as it is described in-depth in the corresponding online course~\citep{mooc2019statistical}.
 
 %% --------------------------------------------
 
 \subsection{Gaussian Process}
 \label{subsec:gp}
 
+\todoCheck{double citation intentional?}
 According to \citeauthor{seeger2004gaussian}~\cite{seeger2004gaussian}, ``Gaussian processes (GPs) are natural generalisations of multivariate Gaussian random variables to infinite [\dots] index sets.''
 A GP is fully defined by a mean function $ \mu : \Omega \rightarrow \mathbb{R}^n $ and a covariance function $k : \Omega \times \Omega \rightarrow \mathbb{R}^{n \times n} $, where $\Omega$ is the domain and $n$ the dimensionality of the data~\citep{mooc2019statistical}.
 
-\todoRevise{Might be incomplete.}
+\todoRevise{Might be incomplete. (Looks good -F)}
 
 %% --------------------------------------------
 
 \subsection{Statistical Shape Model}
 \label{subsec:ssm}
 
-By analyzing a dataset of shapes of the same shape family we can build a statistical shape model (SSM).
+By analyzing a dataset of shapes from the same shape family we can build a statistical shape model (SSM).
 We assume that the variations in the available shapes originate in a set of normally distributed features.
 For each shape in the dataset, the deformation field to a corresponding reference shape is computed.
 From the deformation vectors, we can calculate the mean shape as well as a covariance matrix.
@@ -31,8 +32,9 @@ With these, we can fully describe all shapes from the dataset as well as many mo
 \label{subsec:metrics}
 
 We estimate the accuracy of our model using two different distance measures.
-They value the difference between two meshes.
+They evaluate the difference between two meshes.
 Both metrics are also used for evaluating the final reconstructions in the SICAS competition~\cite{smir}.
+\todoCheck{Smir/sicas was not yet introduced, move to \autoref{subsec:recon}?}
 
 \paragraph{Average Distance}
 The average distance computes the average over all distances from every point on one mesh to its closest point on the other mesh:

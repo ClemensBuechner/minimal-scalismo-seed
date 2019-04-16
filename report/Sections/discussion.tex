@@ -9,7 +9,6 @@ In the following, we will discuss where and how.
 
 \subsection{Kernel Function}
 \label{subsec:kernfuncdisc}
-\todoRevise{Explain the Kernel Function we used}
 We chose our kernel function based on the idea that we need to model both very smooth, long parts and very convoluted, shorter parts in order to model all parts of the bone. 
 Therefore, we thought that a combination of kernels with varying degrees of smoothness would yield a good result for modelling all of the different parts and properties of the femur bone. 
 
@@ -38,15 +37,16 @@ This could likely be fixed using a different kernel function with a smaller scal
 
 \subsection{Registrations}
 \label{subsec:registrresultsdisc}
-These results shown in \autoref{tbl:registration_distance} can give a good indication of how well the trained model will perform.
+The results shown in \autoref{tbl:registration_distance} can give a good indication of how well the trained model will perform.
 As we can not evaluate the distances of the final reconstructions arbitrarily often for different kernels, this is one of the most important metrics for us to improve when searching for better kernels.
 
 The mean average distance of $0.63$ is rather high as we had intermediary results for some kernels with average distances as low as $0.3$. 
-Also this could probably be pushed even further by using lower $\sigma$, a lower tolerance for approximating the GP and more point samples from the shape. 
+This could probably be pushed even further by using lower $\sigma$ values, a lower tolerance for approximating the GP and more point samples from the shape. 
 But of course this leads to very high computation times for even a single registration.
 As we did not have the necessary time, we could not try out these ideas any further.
 
-\todoQuestion{Why is the Hausdorff distance so large compared to the average distance?}
+We can also see that the Hausdorff distance is higher than the average distance by quite a big margin. This indicates that there are some outlying points that could only be modelled poorly.
+
 As it stands, the fit of our model to the training data is certainly reasonable.
 However, this would likely be one of the major points where the model could be improved.
 
@@ -57,7 +57,8 @@ However, this would likely be one of the major points where the model could be i
 
 Looking at \autoref{fig:trained_model}, some samples of our trained model seem to deviate quite a bit from the normal bone shapes we would expect to sample here. 
 In particular, the intricate curvatures along the head, neck, trochanter and condyles pose problems for our model.
-\todoQuestion{Would this be fixed by a kernel with a smaller scale/sigma?}
+
+This could likely be fixed by using more accurate kernels or possibly even implementing a Changepoint kernel.
 
 %% --------------------------------------------
 
@@ -77,8 +78,7 @@ In both cases the head of the bone had to be reconstructed.
 Yet, bone 5, where the whole upper half had to be reconstructed, performed extremely poorly. 
 As can be seen here, having to reconstruct a larger part of the bone leads justifiably to less accurate results.
 
-Interestingly, while the average distances increase considerably in comparison to the average distances of the fit to the training data, the Hausdorff distance only increases by half when going from the training data to the reconstruction.
-\todoQuestion{Why?}
+Interestingly, while the average distances increase considerably in comparison to the average distances of the fit to the training data, the Hausdorff distance only increases by half when going from the training data to the reconstruction. This shows that the biggest outliers for the predicted shapes are not much farther away from the correct fit than they were for the fitting of the training data.
 
 In order to improve the reconstructions, first and foremost the model would have to be improved. 
 Other than that, the only possible improvement that really comes to mind would be to sample a higher number of points or even use all points for the ICP.
