@@ -26,9 +26,10 @@ The latter are shown in \autoref{fig:partials}.
 \label{subsec:rigid}
 
 In order for the SSM to be meaningful, we need our data to be aligned with the reference shape.
-In a first step, we rigidly aligned all bones given as part of the training data set to the reference using a small set of landmarks also given in the data.
-By minimizing the mean squared error of the corresponding landmarks, we can to find a good approximation of equal orientation.
-Hereby, we maintain all shape information but get rid of differences caused by transformation and / or rotation of a shape.
+Otherwise, the main variation in the model will originate in rotation and translation of the different meshes.
+Thus, in a first step, we rigidly aligned all bones given as part of the training data to the reference using a small set of landmarks also given in the data.
+By minimizing the mean squared error of the corresponding landmarks, we can find a good approximation of equal orientation.
+This procedure removes differences caused by translation and rotation of a shape whilst maintaining all shape information.
 
 %% --------------------------------------------
 

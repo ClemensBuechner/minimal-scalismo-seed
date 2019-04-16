@@ -36,7 +36,7 @@ Both metrics are also used for evaluating the final reconstructions in the SICAS
 
 \paragraph{Average Distance}
 The average distance computes the average over all distances from every point on one mesh to its closest point on the other mesh:
-$$ \sum_{p \in M_1} \mathit{dist}_{M_2}(p) $$
+$$ \frac{1}{|M_1|} \sum_{p \in M_1} \mathit{dist}_{M_2}(p) $$
 where $p \in M_1$ denotes a point $p$ on mesh $M_1$ and $\mathit{dist}_{M_2}$ is a function mapping a point to its minimal distance to mesh~$M_2$.
 
 \paragraph{Hausdorff Distance}
