@@ -9,12 +9,10 @@ In this section we present the outcome of our implementation.
 \subsection{Kernel Model}
 \label{subsec:kernmodel}
 
-For constructing a model to register the data, we ended up using was the following: 
-$$ k(5, 20) + k(10, 50) + k(100, 200) + ks(200, 500) $$
-where $k(s, \sigma)$ is a diagonal kernel of Gaussian kernels with variance $\sigma$ scaled $s$. \todoRevise{I don't think this is still our kernel.}
-\autoref{fig:kernel_model} shows its outcome.
-The mean of the the kernel model is shown in orange.
-Alongside the mean, some samples drawn from its distribution are drawn, and show its variability.
+For constructing a model to register the data, we ended up using the following: 
+$$ k(5, 20) + k(10, 50) + k(100, 200) + ks(200, 500) $$ \todoRevise{I don't think this is still our kernel.}
+where $k(s, \sigma)$ is a diagonal kernel of Gaussian kernels with variance $\sigma$ scaled with $s$. 
+\autoref{fig:kernel_model} shows its mean in orange and some samples of its variability in white.
 
 \begin{figure}
 	\centering
@@ -29,8 +27,9 @@ Alongside the mean, some samples drawn from its distribution are drawn, and show
 
 \subsection{Registrations}
 \label{subsec:registrresults}
-While in the end we are only interested in the distance between our reconstruction and the ground truth, we can also use the average distance and the Hausdorff distance as an indication of how closely we were able to fit our kernel model to the training data. 
-In contrast to the previous distances, we are able to calculate these ourselves and hopefully, a better representation of our training data also leads to a better reconstruction of the partial bones. 
+While in the end we are only interested in the distance between our reconstruction and the ground truth, we can also use the distance metrics as an indication of how closely our kernel model fits the training data. 
+We are able to calculate these values for every element in our training data.
+Hopefully, a better representation of our training data also leads to a better reconstruction of the partial bones. 
 
 We provided a part of these values in \autoref{tbl:example_registration_distance}. For the full table please refer to the appendix.
 
