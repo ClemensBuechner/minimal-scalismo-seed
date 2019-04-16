@@ -3,6 +3,7 @@
 \todoMissing{write discussion}
 Overall, the results show that our procedure worked and we managed to model reconstructions of the partial femur bones. At the time of writing, we are ranked 37 out of 54 on the smir challenge. While we can see that the fundamentals are working properly, there is definitely room for improvement. In the following, we will discuss where and how.
 
+\todoQuestion{Too negative/positive?}
 One issue we faced with fine tuning the procedure was that it took quite some time to get the complete pipeline working so we could actually see the reconstructions resulting from our choices. Together with high computation times, this generally means that we could not test every setting we would have wanted to test.
 		
 %% --------------------------------------------
@@ -16,20 +17,25 @@ We chose our kernel function based on the idea that we need to model both very s
 Furthermore, we also considered using kernels with a higher scaling factor along the z axis, which in this case would be the length of the bone. However, in practice, we could not make out a meaningful difference for the results with such a scaled kernel and thus decided to stick to the uniform kernels.
 
 \todoRevise{Talk about late completion of the pipeline}
-Nonetheless, the kernel function is a part of the reconstruction process where there is a high degree of variability with many different kernel functions possible. Unfortunately, testing the performance of the kernel functions in practice is a rather time consuming and difficult process as not only do all the computations have to be redone, but also the performance evaluation is not very clear cut as we can not test the distances of our reconstruction to the ground truth for every new kernel. This means that the evaluation of each kernel has to be estimated by hand based on the intermediary results. Due to the high time cost to finding new kernel functions, it can be assumed that in our necessarily limited testing we did not yet find the best kernel function for this problem and that there is still room for improvement in the choice of the kernel function.
+Nonetheless, the kernel function is a part of the reconstruction process where there is a high degree of variability with many different kernel functions possible. Unfortunately, testing the performance of the kernel functions in practice is a rather time consuming and difficult process as not only do all the computations have to be redone, but also the performance evaluation is not very clear cut as we can not test the distances of our reconstruction to the ground truth for every new kernel. This means that the evaluation of each kernel has to be estimated by hand based on the intermediary results, the fit of the registrations in particular. Due to the high time cost to finding new kernel functions and our limited time with the full pipeline completed, it is safe to assume that in our testing we did not yet find the best kernel function for this problem and that there is still room for improvement in the choice of the kernel function.
 %% --------------------------------------------
 
 \subsection{Kernel Model}
 \label{subsec:kernmodeldisc}
-\todoMissing{Does the kernel model look realistic?}
+In \autoref{fig:kernel_model} we can see the mean and some random samples of the kernel model resulting from our kernel function. While the mean looks very realistic, as soon as we sample there are a lot of wobbly sections appearing, especially along the middle part of the bone. This is not necessarily bad and in general we would assume the samples from our kernel model to have such deformations, however for our kernel this is quite extreme in some cases, \eg the rightmost sample. This could likely be fixed using a different kernel function with a smaller scale.
 
 %% --------------------------------------------
 
 \subsection{Registrations}
 \label{subsec:registrresultsdisc}
-\todoMissing{Discuss the average distances and fit}
-\todoMissing{Is our kernel good enough to fit the registrations?}
-\todoMissing{How could we improve this step?}
+\autoref{tbl:registration_distance} shows the mean and the standard deviation of both the average distance and the Hausdorff distance between the aligned model and the training data over all 50 bones. These results can give a good indication of how well the trained model will perform and as we can not evaluate the distances of the final reconstructions arbitrarily often for different kernels, this is one of the most important metrics for us to improve when searching for better kernels.
+
+The mean average distance of 0.63 is rather high as we had intermediary results for some kernels with average distances as low as 0.3. Even this could probably be pushed even further by using lower sigmas, a lower tolerance for the kernel model and more point samples from the shape. But of course this leads to very high computation times for even a single registration.
+\todoRevise{Elaborate on possible improvements?} 
+
+\todoQuestion{Why is the hausdorff distance so large compared to the average distance?}
+As it stands, the fit of our model to the training data is certainly reasonable, but this would likely be one of the major points where we could still see improvement for it.
+\todoRevise{Elaborate?}
 
 %% --------------------------------------------
 
