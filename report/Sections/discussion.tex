@@ -1,33 +1,22 @@
 \section{Discussion}
 \label{sec:discussion}
 \todoMissing{write discussion}
+Overall, the results show that our procedure worked and we managed to model reconstructions of the partial femur bones. At the time of writing, we are ranked 37 out of 54 on the smir challenge. While we can see that the fundamentals are working properly, there is definitely room for improvement. In the following, we will discuss where and how.
 
-%	Quality of results
-%	Explanation of good/bad results
-%		Kernel Function: are our kernels good? Why do we use those kernels?
-%		kernel functions:
-%			5, 20 + 20, 50 + 100, 200 + z500, 1000
-%			5, 20 + 20, 50 + 100, 200 + 500, 1000
-%			5, 20 + 20, 50 + 100, 200 + 500, 500
-%			5, 20 + 20, 50 + 100, 200 + 20, 20
-%		kernel model?
-%		fit of training data?
-%		trained model?
-%		fit of final bone reconstruction
+One issue we faced with fine tuning the procedure was that it took quite some time to get the complete pipeline working so we could actually see the reconstructions resulting from our choices. Together with high computation times, this generally means that we could not test every setting we would have wanted to test.
 		
-%	Improvements inside the scope of the project
-%	Find the best kernel
-%	Pick a better sigma for the kernel?
-%	Improvements outside the scope of the project
-%	Use better procedures (bayes) instead of icp
-
 %% --------------------------------------------
 
 \subsection{Kernel Function}
 \label{subsec:kernfuncdisc}
-\todoMissing{Explain the Kernel Function we used}
-\todoMissing{What other kernel functions might make sense?}
+\todoRevise{Explain the Kernel Function we used}
+We chose our kernel function based on the idea that we need to model both very smooth, long parts and very convoluted, shorter parts in order to model the complete bone. Therefore, we thought that a combination of kernels with varying degrees of smoothness would yield the best result for modelling all of the different parts and properties of the femur bone. 
 
+\todoRevise{What other kernel functions might make sense?}
+Furthermore, we also considered using kernels with a higher scaling factor along the z axis, which in this case would be the length of the bone. However, in practice, we could not make out a meaningful difference for the results with such a scaled kernel and thus decided to stick to the uniform kernels.
+
+\todoRevise{Talk about late completion of the pipeline}
+Nonetheless, the kernel function is a part of the reconstruction process where there is a high degree of variability with many different kernel functions possible. Unfortunately, testing the performance of the kernel functions in practice is a rather time consuming and difficult process as not only do all the computations have to be redone, but also the performance evaluation is not very clear cut as we can not test the distances of our reconstruction to the ground truth for every new kernel. This means that the evaluation of each kernel has to be estimated by hand based on the intermediary results. Due to the high time cost to finding new kernel functions, it can be assumed that in our necessarily limited testing we did not yet find the best kernel function for this problem and that there is still room for improvement in the choice of the kernel function.
 %% --------------------------------------------
 
 \subsection{Kernel Model}
@@ -58,3 +47,11 @@
 \todoMissing{Discuss outliers, good/bad bones}
 \todoMissing{Explain good/bad results}
 \todoMissing{How could we improve this?}
+
+\subsection{Further Improvements}
+\label{subsec:improvements}
+\todoMissing{Better Kernel, also test scaled kernel more}
+\todoMissing{Localised Kernel Use}
+\todoMissing{Use all points}
+\todoCheck{Apply a kernel afterwards?}
+\todoMissing{Bayes instead of icp}
