@@ -64,24 +64,30 @@ However, this would likely be one of the major points where we could still see a
 
 \subsection{Trained Model}
 \label{subsec:trainedmodeldisc}
-\todoMissing{Does the trained model look realistic?}
-Looking at \autoref{fig:trained_model}, some samples of our trained model seem to deviate quite a bit from the normal bone shapes we would expect to sample here. For 
+Looking at \autoref{fig:trained_model}, some samples of our trained model seem to deviate quite a bit from the normal bone shapes we would expect to sample here. In particular, the intricate curvatures along the head, neck, trochanter and condyles pose problems for our model.
+\todoQuestion{Would this be fixed by a kernel with a smaller scale/sigma?}
 
 %% --------------------------------------------
 
 \subsection{Reconstruction of Partial Bones}
 \label{subsec:reconresultsdisc}
 
-\todoMissing{Do the reconstructions look realistic?}
-\todoMissing{Are the distances good?}
-\todoMissing{Discuss outliers, good/bad bones}
-\todoMissing{Explain good/bad results}
-\todoMissing{How could we improve this?}
+From the images of the fully reconstructed bones in \autoref{fig:reconstructed_bone} we can unsurprisingly see the problems we had with our trained model for the difficult parts reoccur: the model has difficulty reconstructing the details in both extremities of the femur while still sometimes being too wiggly in the body region. This is of course a direct consequence from the problems of the trained model.
+
+When we are comparing the distances of the reconstructions from \autoref{tbl:reconstructed_distance} with their visualisations from \autoref{fig:reconstructed_bone}, we have to keep in mind that these scores are only generated for the missing parts of the bone. For example, the misshaped head of the third bone is not explicitly considered in the distance measurements as only the right side of the bone needed to be reconstructed. Still, we can clearly see the misalignments of the predictions indicated by the distances in the reconstructed images.
+
+Nevertheless, for some examples the model works very well, for example bones 1 and 9 look very much like realistic bones and have low average and Hausdorff distances. Both times, the head of the bone had to be reconstructed. Yet, bone 5, where the whole upper extremity had to be reconstructed, performed extremely poorly. As can be seen here, having to reconstruct a larger part of the bone leads justifiably to less accurate results.
+
+Interestingly, while the average distances understandably increase considerably in comparison to the average distances of the fit to the trainings data, the Hausdorff distance only increases by half when going from the training data to the reconstruction.
+\todoQuestion{Why?}
+
+In order to improve the reconstructions, first and foremost the model would have to be improved. Other than that, the only possible improvement that really comes to mind would be to sample a higher number of points or even use all points for the ICP, but this again would go hand in hand with an increase in computation time.
 
 \subsection{Further Improvements}
 \label{subsec:improvements}
+\todoMissing{BIG PROBLEM: MODEL}
 \todoMissing{Better Kernel, also test scaled kernel more}
 \todoMissing{Localised Kernel Use}
 \todoMissing{Use all points}
-\todoCheck{Apply a kernel afterwards?}
+\todoMissing{Augment interpolated model with smoothing kernel}
 \todoMissing{Bayes instead of icp}
