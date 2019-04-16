@@ -10,7 +10,7 @@ In this section we present the outcome of our implementation.
 \label{subsec:kernmodel}
 
 For constructing a model to register the data, we ended up using the following: 
-$$ k(5, 20) + k(10, 50) + k(100, 200) + ks(200, 500) $$ \todoRevise{I don't think this is still our kernel.}
+$$ k(5, 20) + k(10, 50) + k(100, 200) $$
 where $k(s, \sigma)$ is a diagonal kernel of Gaussian kernels with variance $\sigma$ scaled with $s$. 
 \autoref{fig:kernel_model} shows its mean in orange and some samples of its variability in white.
 
@@ -31,33 +31,8 @@ While in the end we are only interested in the distance between our reconstructi
 We are able to calculate these values for every element in our training data.
 Hopefully, a better representation of our training data also leads to a better reconstruction of the partial bones. 
 
-We provided a part of these values in \autoref{tbl:example_registration_distance}. For the full table please refer to the appendix.
+We provided mean and standard deviation of these values in \autoref{tbl:registration_distance}.
 
-\begin{table}
-\centering
-\caption{Example distances from fitted model to training data}
-\label{tbl:example_registration_distance}
-\begin{tabular}{lrr}
-\toprule
-\textbf{Bones} &
-Average Distance &
-Hausdorff Distance \\
-\midrule
-Bone 1& 0.3 & 2 \\
-Bone 2& 0.3 & 2 \\
-Bone 3& 0.3 & 2 \\
-Bone 4& 0.3 & 2 \\
-Bone 5& 0.3 & 2 \\
-Bone 6& 0.3 & 2 \\
-Bone 7& 0.3 & 2 \\
-Bone 8& 0.3 & 2 \\
-Bone 9& 0.3 & 2 \\
-Bone 10& 0.3 & 2 \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\iffalse
 \begin{table}
 \centering
 \caption{Distances from fitted model to training data}
@@ -68,60 +43,11 @@ Bone 10& 0.3 & 2 \\
 Average Distance &
 Hausdorff Distance \\
 \midrule
-Bone 1& 0.3 & 2 \\
-Bone 2& 0.3 & 2 \\
-Bone 3& 0.3 & 2 \\
-Bone 4& 0.3 & 2 \\
-Bone 5& 0.3 & 2 \\
-Bone 6& 0.3 & 2 \\
-Bone 7& 0.3 & 2 \\
-Bone 8& 0.3 & 2 \\
-Bone 9& 0.3 & 2 \\
-Bone 10& 0.3 & 2 \\
-Bone 11& 0.3 & 2 \\
-Bone 12& 0.3 & 2 \\
-Bone 13& 0.3 & 2 \\
-Bone 14& 0.3 & 2 \\
-Bone 15& 0.3 & 2 \\
-Bone 16& 0.3 & 2 \\
-Bone 17& 0.3 & 2 \\
-Bone 18& 0.3 & 2 \\
-Bone 19& 0.3 & 2 \\
-Bone 20& 0.3 & 2 \\
-Bone 21& 0.3 & 2 \\
-Bone 22& 0.3 & 2 \\
-Bone 23& 0.3 & 2 \\
-Bone 24& 0.3 & 2 \\
-Bone 25& 0.3 & 2 \\
-Bone 26& 0.3 & 2 \\
-Bone 27& 0.3 & 2 \\
-Bone 28& 0.3 & 2 \\
-Bone 29& 0.3 & 2 \\
-Bone 30& 0.3 & 2 \\
-Bone 31& 0.3 & 2 \\
-Bone 32& 0.3 & 2 \\
-Bone 33& 0.3 & 2 \\
-Bone 34& 0.3 & 2 \\
-Bone 35& 0.3 & 2 \\
-Bone 36& 0.3 & 2 \\
-Bone 37& 0.3 & 2 \\
-Bone 38& 0.3 & 2 \\
-Bone 39& 0.3 & 2 \\
-Bone 40& 0.3 & 2 \\
-Bone 41& 0.3 & 2 \\
-Bone 42& 0.3 & 2 \\
-Bone 43& 0.3 & 2 \\
-Bone 44& 0.3 & 2 \\
-Bone 45& 0.3 & 2 \\
-Bone 46& 0.3 & 2 \\
-Bone 47& 0.3 & 2 \\
-Bone 48& 0.3 & 2 \\
-Bone 49& 0.3 & 2 \\
-Bone 50& 0.3 & 2 \\
+Mean& 0.63 & 11.05 \\
+Standard Deviation& 0.28 & 15.45 \\
 \bottomrule
 \end{tabular}
 \end{table}
-\fi
 
 In \autoref{fig:registration_fit} you can see an example of the kernel model fitted to the training data.
 
