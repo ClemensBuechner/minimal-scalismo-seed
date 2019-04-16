@@ -1,47 +1,77 @@
 \section{Discussion}
 \label{sec:discussion}
+<<<<<<< HEAD
 \todoMissing{review discussion}
 Overall, the results show that our procedure worked and we managed to model reconstructions of the partial femur bones. At the time of writing, we are ranked 37 out of 54 on the smir challenge. While we can see that the fundamentals are working properly, there is definitely room for improvement. In the following, we will discuss where and how.
+=======
+\todoMissing{write discussion}
+Overall, the results show that our procedure worked and we managed to model reconstructions of the partial femur bones. 
+At the time of writing, we are ranked 37 out of 54 on the SMIR challenge~\cite{smir}. 
+While we can see that the fundamentals are working properly, there is definitely room for improvement. 
+In the following, we will discuss where and how.
+>>>>>>> ba993062a964913632fdbec526f5240d41b8c373
 
+One issue we faced with fine tuning the procedure was, that it took quite some time to get the complete pipeline working so we could actually see the reconstructions resulting from our choices. 
+Together with high computation times, this generally means that we could not test every setting we would have wanted to test.
 \todoQuestion{Too negative/positive?}
-One issue we faced with fine tuning the procedure was that it took quite some time to get the complete pipeline working so we could actually see the reconstructions resulting from our choices. Together with high computation times, this generally means that we could not test every setting we would have wanted to test.
+\todoNote{I (Clemi) would move this to the conclusion, and not start the discussion off with this fact.}
 		
 %% --------------------------------------------
 
 \subsection{Kernel Function}
 \label{subsec:kernfuncdisc}
 \todoRevise{Explain the Kernel Function we used}
-We chose our kernel function based on the idea that we need to model both very smooth, long parts and very convoluted, shorter parts in order to model the complete bone. Therefore, we thought that a combination of kernels with varying degrees of smoothness would yield the best result for modelling all of the different parts and properties of the femur bone. 
+We chose our kernel function based on the idea that we need to model both very smooth, long parts and very convoluted, shorter parts in order to model all parts of the bone. 
+Therefore, we thought that a combination of kernels with varying degrees of smoothness would yield a good result for modelling all of the different parts and properties of the femur bone. 
 
 \todoRevise{What other kernel functions might make sense?}
-Furthermore, we also considered using kernels with a higher scaling factor along the z axis, which in this case would be the length of the bone. However, in practice, we could not make out a meaningful difference for the results with such a scaled kernel and thus decided to stick to the uniform kernels.
+\todoNote{Tell what other things could work well in the conclusion / future work}
+Furthermore, we also considered using kernels with a higher scaling factor along the $z$-axis, which in this case would be the length of the bone. 
+However, in practice, we could not make out a meaningful difference for the results with such a scaled kernel and thus decided to stick to the uniform kernels.
 
 \todoRevise{Talk about late completion of the pipeline}
-Nonetheless, the kernel function is a part of the reconstruction process where there is a high degree of variability with many different kernel functions possible. Unfortunately, testing the performance of the kernel functions in practice is a rather time consuming and difficult process as not only do all the computations have to be redone, but also the performance evaluation is not very clear cut as we can not test the distances of our reconstruction to the ground truth for every new kernel. This means that the evaluation of each kernel has to be estimated by hand based on the intermediary results, the fit of the registrations in particular. Due to the high time cost to finding new kernel functions and our limited time with the full pipeline completed, it is safe to assume that in our testing we did not yet find the best kernel function for this problem and that there is still room for improvement in the choice of the kernel function.
+Nonetheless, the kernel function is a part of the reconstruction process where there is a high degree of variability with many different kernel functions possible. 
+Unfortunately, testing the performance of the kernel functions in practice is a rather time consuming and difficult process.
+Not only do all the computations have to be redone for every new kernel, but also the performance evaluation is not very clear cut as we can not test the distances of our reconstruction to the ground truth for every new kernel.
+This means that the evaluation of each kernel has to be estimated by hand based on the intermediary results, the fit of the registrations in particular. 
+As our full pipeline was only finished in a late stage of the project, we were not able to test as intensely as would be necessary in order to find a more sophisticated kernel.
+
 %% --------------------------------------------
 
 \subsection{Kernel Model}
 \label{subsec:kernmodeldisc}
-In \autoref{fig:kernel_model} we can see the mean and some random samples of the kernel model resulting from our kernel function. While the mean looks very realistic, as soon as we sample there are a lot of wobbly sections appearing, especially along the middle part of the bone. This is not necessarily bad and in general we would assume the samples from our kernel model to have such deformations, however for our kernel this is quite extreme in some cases, \eg the rightmost sample. This could likely be fixed using a different kernel function with a smaller scale.
+
+In \autoref{fig:kernel_model} we can see the mean and some random samples of the kernel model resulting from our kernel function. 
+While the mean looks very realistic, as soon as we sample there are a lot of wobbly sections appearing, especially along the middle part of the bone. 
+This is not necessarily bad, as in this step we want a flexible model to fit the training data as good as possible.
+Thus, in general we would assume the samples from our kernel model can have such deformations.
+However, for our kernel this is quite extreme in some cases, \eg the rightmost sample.
+This could likely be fixed using a different kernel function with a smaller scale.
 
 %% --------------------------------------------
 
 \subsection{Registrations}
 \label{subsec:registrresultsdisc}
-\autoref{tbl:registration_distance} shows the mean and the standard deviation of both the average distance and the Hausdorff distance between the aligned model and the training data over all 50 bones. These results can give a good indication of how well the trained model will perform and as we can not evaluate the distances of the final reconstructions arbitrarily often for different kernels, this is one of the most important metrics for us to improve when searching for better kernels.
+These results shown in \autoref{tbl:registration_distance} can give a good indication of how well the trained model will perform.
+As we can not evaluate the distances of the final reconstructions arbitrarily often for different kernels, this is one of the most important metrics for us to improve when searching for better kernels.
 
-The mean average distance of 0.63 is rather high as we had intermediary results for some kernels with average distances as low as 0.3. Even this could probably be pushed even further by using lower sigmas, a lower tolerance for the kernel model and more point samples from the shape. But of course this leads to very high computation times for even a single registration.
-\todoRevise{Elaborate on possible improvements?} 
+The mean average distance of $0.63$ is rather high as we had intermediary results for some kernels with average distances as low as $0.3$. 
+Also this could probably be pushed even further by using lower $\sigma$, a lower tolerance for approximating the GP and more point samples from the shape. 
+But of course this leads to very high computation times for even a single registration.
+As we did not have the necessary time, we could not try out these ideas any further.
 
-\todoQuestion{Why is the hausdorff distance so large compared to the average distance?}
-As it stands, the fit of our model to the training data is certainly reasonable, but this would likely be one of the major points where we could still see improvement for it.
+\todoQuestion{Why is the Hausdorff distance so large compared to the average distance?}
+As it stands, the fit of our model to the training data is certainly reasonable.
+However, this would likely be one of the major points where we could still see a lot of improvement for it.
 \todoRevise{Elaborate?}
 
 %% --------------------------------------------
 
 \subsection{Trained Model}
 \label{subsec:trainedmodeldisc}
-Looking at \autoref{fig:trained_model}, some samples of our trained model seem to deviate quite a bit from the normal bone shapes we would expect to sample here. In particular, the intricate curvatures along the head, neck, trochanter and condyles pose problems for our model.
+
+Looking at \autoref{fig:trained_model}, some samples of our trained model seem to deviate quite a bit from the normal bone shapes we would expect to sample here. 
+In particular, the intricate curvatures along the head, neck, trochanter and condyles pose problems for our model.
 \todoQuestion{Would this be fixed by a kernel with a smaller scale/sigma?}
 
 %% --------------------------------------------
@@ -49,13 +79,22 @@ Looking at \autoref{fig:trained_model}, some samples of our trained model seem t
 \subsection{Reconstruction of Partial Bones}
 \label{subsec:reconresultsdisc}
 
-From the images of the fully reconstructed bones in \autoref{fig:reconstructed_bone} we can unsurprisingly see the problems we had with our trained model for the difficult parts reoccur: the model has difficulty reconstructing the details in both extremities of the femur while still sometimes being too wiggly in the body region. This is of course a direct consequence from the problems of the trained model.
+From the images of the fully reconstructed bones in \autoref{fig:reconstructed_bone} we see the problems we had with our trained model for the difficult parts reoccur: the model has some difficulties reconstructing the details at both ends of the femur while still sometimes being too wiggly in the body region. 
+This is of course a direct consequence from the problems of the trained model.
 
-When we are comparing the distances of the reconstructions from \autoref{tbl:reconstructed_distance} with their visualisations from \autoref{fig:reconstructed_bone}, we have to keep in mind that these scores are only generated for the missing parts of the bone. For example, the misshaped head of the third bone is not explicitly considered in the distance measurements as only the right side of the bone needed to be reconstructed. Still, we can clearly see the misalignments of the predictions indicated by the distances in the reconstructed images.
+When we are comparing the distances of the reconstructions from \autoref{tbl:reconstructed_distance} with their visualizations from \autoref{fig:reconstructed_bone}, we have to keep in mind that these scores are only generated for the missing parts of the bone. 
+For example, the misshaped head of the third bone is not explicitly considered in the distance measurements as only the right side of the bone needed to be reconstructed. 
+Still, we can clearly see the misalignments of the predictions indicated by the distances in the reconstructed images.
 
-Nevertheless, for some examples the model works very well, for example bones 1 and 9 look very much like realistic bones and have low average and Hausdorff distances. Both times, the head of the bone had to be reconstructed. Yet, bone 5, where the whole upper extremity had to be reconstructed, performed extremely poorly. As can be seen here, having to reconstruct a larger part of the bone leads justifiably to less accurate results.
+Nevertheless, for some examples the model works quite well.
+For example bones 1 and 9 look very much like realistic bones and have low average and Hausdorff distances. 
+In both cases the head of the bone had to be reconstructed. 
+Yet, bone 5, where the whole upper half had to be reconstructed, performed extremely poorly. 
+As can be seen here, having to reconstruct a larger part of the bone leads justifiably to less accurate results.
 
-Interestingly, while the average distances understandably increase considerably in comparison to the average distances of the fit to the trainings data, the Hausdorff distance only increases by half when going from the training data to the reconstruction.
+Interestingly, while the average distances increase considerably in comparison to the average distances of the fit to the training data, the Hausdorff distance only increases by half when going from the training data to the reconstruction.
 \todoQuestion{Why?}
 
-In order to improve the reconstructions, first and foremost the model would have to be improved. Other than that, the only possible improvement that really comes to mind would be to sample a higher number of points or even use all points for the ICP, but this again would go hand in hand with an increase in computation time.
+In order to improve the reconstructions, first and foremost the model would have to be improved. 
+Other than that, the only possible improvement that really comes to mind would be to sample a higher number of points or even use all points for the ICP.
+However, this again would go hand in hand with an increase in computation time.
