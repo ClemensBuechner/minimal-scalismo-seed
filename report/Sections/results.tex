@@ -21,7 +21,7 @@ Alongside the mean, some samples drawn from its distribution are drawn, and show
   \includegraphics[width=\columnwidth]{./Figures/kernel_model_samples}
   \caption{
     The mean of our kernel model shown in orange. 
-    It is accompanied by some random samples of the model.}
+    Alongside are shown some random samples of the model.}
   \label{fig:kernel_model}
 \end{figure}
 
@@ -67,8 +67,10 @@ In \autoref{fig:registration_fit} you can see an example of the kernel model fit
 
 \begin{figure}
 	\centering
-  \includegraphics[scale=0.7]{./Figures/trained_model}
-  \caption{Mean of the trained model.}
+  \includegraphics[width=\columnwidth]{./Figures/interpolated_model_samples}
+  \caption{
+    The mean of our trained model shown in orange.
+    Alongside are shown some random samples of the model.}
   \label{fig:trained_model}
 \end{figure}
 
@@ -81,12 +83,12 @@ This will be tested using both the average distance and the Hausdorff distance b
 
 \autoref{fig:reconstructed_bone} shows a partial bone next to its reconstruction.
 
-\begin{figure}
+\begin{figure*}
 	\centering
-  \includegraphics[scale=0.7]{./Figures/reconstructed_bone}
-  \caption{Example reconstruction of a partial bone.}
+  \includegraphics[width=0.82\textwidth]{./Figures/reconstruction_summary}
+  \caption{All partial femurs displayed in white, aligned with our reconstruction, displayed in yellow.}
   \label{fig:reconstructed_bone}
-\end{figure}
+\end{figure*}
 
 All ten images of the partial femur bones that were given alongside our reconstruction can be found in the appendix. 
 Their average distance and Hausdorff distance scores can be found in \autoref{tbl:reconstructed_distance}.
@@ -101,18 +103,16 @@ Their average distance and Hausdorff distance scores can be found in \autoref{tb
 Average Distance &
 Hausdorff Distance \\
 \midrule
-Bone 1& 2.44 & 5.40 \\
-Bone 2& 3.23 & 10.28 \\
-Bone 3& 3.64 & 14.46 \\
-Bone 4& 1.92 & 9.46 \\
-Bone 5& 5.16 & 40.97 \\
-Bone 6& 3.65 & 21.59 \\
-Bone 7& 2.65 & 11.91 \\
-Bone 8& 3.71 & 12.27 \\
-Bone 9& 2.14 & 5.42 \\
-Bone 10& 7.46 & 24.89 \\
-\midrule
-Average & 3.60 & 15.66 \\
+Bone 1& 0.3 & 2 \\
+Bone 2& 0.3 & 2 \\
+Bone 3& 0.3 & 2 \\
+Bone 4& 0.3 & 2 \\
+Bone 5& 0.3 & 2 \\
+Bone 6& 0.3 & 2 \\
+Bone 7& 0.3 & 2 \\
+Bone 8& 0.3 & 2 \\
+Bone 9& 0.3 & 2 \\
+Bone 10& 0.3 & 2 \\
 \bottomrule
 \end{tabular}
 \end{table}
