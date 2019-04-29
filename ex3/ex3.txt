@@ -23,5 +23,5 @@ The large regularization parameter punishes close fits so only the principle com
 Our model isn't flexible enough.
 
 7: After performing the registration, we could project the MAP solution we found using our model onto the target surface. This projection result in a perfect approximation of the target surface. Should we always do this or can you think of a situation where this is not appropriate?
-e
+
 This is a smart thing to do as long as the registration is already very closely fitted to the target.
