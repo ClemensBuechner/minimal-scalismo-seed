@@ -1,21 +1,27 @@
 1: Draw samples from the Gaussian process model, which is used for the registration. What do you think about the model? How would you improve it?
-Very flexible, too much variation. Better kernel, use more example data?
+
+Very flexible, possibly allowing too much variation. Improvements could be made using better kernel functions or by including more example data.
 
 2: Assume that in addition to the reference and the target surface, you would be given corresponding landmark points. How would you incorporate them into the registration algorithm? How would this change the registration code?
+
 We can use them for the likelihood calculation to perform landmark registration and not image registration.
 
 3: What is the influence of the regularization parameter? What happens when you set it to a large value (e.g. ≫ 1). What if you set it very small?
 
-The regularization parameter indicates how strongly regularization is weighed, i.e. how much we want to punish overfitting. We see that the coefficients corresponding to the leading principal components are all adjusted, whereas the trailing components remain small (close to zero). The registration makes much slower progress for a high regularization parameter. For r=100 it stops after 6 iterations with an object value above 80, for r=1e-5 it stops after 50 iterations with an object value of 0.4. This means that we get a close fit for low values and a poor fit for high values as we don't punish more exactly fitted solutions with the regularization parameter.
+The regularization parameter indicates how strongly regularization is weighed, i.e. how much we want to punish overfitting. We can see that the coefficients of the leading principal components all have large adjustments, while the trailing components only have small adjustments. The registration makes much slower progress using a high regularization parameter. For r=100 it stops after 6 iterations with an object value above 80, for r=1e-5 it stops after 50 iterations with an object value of 0.4. This means that we get a close fit for low values and a poor fit for high values as we don't punish more exactly fitted solutions with a low regularization parameter but do so with a high one.
 
 4: Could you give a probabilistic interpretation to the regularization parameter? Hint: Look at the derivation of the variational formulation in the lecture slides.
+
 It is the prior. In MAP we can punish complex hypotheses using small priors. This role is taken by the regularization parameter here.
 
 5: When we set the regularization parameter to a very large value, we see that the coefficients corresponding to the leading principal components are all adjusted, whereas the trailing components remain small (close to zero). Can you explain this?
+
 The large regularization parameter punishes close fits so only the principle components "are woth adjusting" in our optimization. Analogously, we see the trailing components being adjusted more for smaller regularization parameters.
 
 6: A regularization value of 0 means that we don’t penalize any solutions in our space. Why is our approximation still not perfect?
+
 Our model isn't flexible enough.
 
 7: After performing the registration, we could project the MAP solution we found using our model onto the target surface. This projection result in a perfect approximation of the target surface. Should we always do this or can you think of a situation where this is not appropriate?
+e
 This is a smart thing to do as long as the registration is already very closely fitted to the target.
