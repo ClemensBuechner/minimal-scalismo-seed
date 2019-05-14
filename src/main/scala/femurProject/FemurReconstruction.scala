@@ -43,8 +43,8 @@ object FemurReconstruction {
     println("Loaded dataset of targets.")
 
     val model = getKernelModel("data/femora/kernelModel_" + testname + ".h5", reference)
-//    val kernelGroup = ui.createGroup("kernel model")
-//    val kernelModel = ui.show(kernelGroup, model, "kernel")
+    //    val kernelGroup = ui.createGroup("kernel model")
+    //    val kernelModel = ui.show(kernelGroup, model, "kernel")
 
     val sampler = UniformMeshSampler3D(model.referenceMesh, numberOfPoints = 8000)
     val points = sampler.sample().map { pointWithProbability => pointWithProbability._1 }
@@ -52,7 +52,7 @@ object FemurReconstruction {
     println("Finished sampling points on the mesh.")
 
 
-//    val registrationGroup = ui.createGroup("registration")
+    //    val registrationGroup = ui.createGroup("registration")
     val defFields = targets.indices.map { i: Int =>
       //    val defFields = (40 until 50).map { i: Int =>
       val target = targets(i)
@@ -86,8 +86,8 @@ object FemurReconstruction {
     StatisticalModelIO.writeStatisticalMeshModel(finalModel,
       new File("data/femora/interpolatedModel_" + testname + ".h5"))
 
-//    val modelGroup = ui.createGroup("gp from deformations")
-//    ui.show(modelGroup, finalModel, "mean")
+    //    val modelGroup = ui.createGroup("gp from deformations")
+    //    ui.show(modelGroup, finalModel, "mean")
 
     val partialFiles = new File("data/femora/partial/").listFiles().sorted
     val partials = partialFiles.map { f => MeshIO.readMesh(f).get }
@@ -95,7 +95,8 @@ object FemurReconstruction {
 
     //    StdIn.readLine("Reconstruct first partial: press [enter].")
     val partialGroup = ui.createGroup("partials")
-    partials.indices.map { i: Int =>
+    //    partials.indices.map { i: Int =>
+    (7 until 10).map { i: Int =>
 
       val sampler = UniformMeshSampler3D(partials(i), numberOfPoints = 8000)
       val points = sampler.sample().map { pointWithProbability => pointWithProbability._1 }
@@ -113,7 +114,8 @@ object FemurReconstruction {
 
       val partialAlignedView = ui.show(partialGroup, aligned, "partial_aligned")
       println(partialFiles(i).getName)
-      MeshIO.writeMesh(aligned, new File("data/femora/reconstructions/" + i + ".ply"))
+      MeshIO.writeMesh(aligned, new File("data/femora/reconstructions/VSD.case_" + (i + 1) + "." +
+        (101147 + i) + ".stl"))
       //      StdIn.readLine("Show next reconstruction.")
       partialView.remove()
       partialAlignedView.remove()
