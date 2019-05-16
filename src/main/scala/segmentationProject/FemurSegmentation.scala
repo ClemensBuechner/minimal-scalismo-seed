@@ -28,7 +28,7 @@ object FemurSegmentation {
     val modelView = ui.show(modelGroup, asm.statisticalModel, "shapeModel")
 
     val profiles = asm.profiles
-    profiles.foreach( profile => {
+    profiles.foreach(profile => {
       val pointId = profile.pointId
       val distribution = profile.distribution
     })
@@ -37,7 +37,7 @@ object FemurSegmentation {
     val tests = Array(4, 14, 23, 25, 30)
     val targets = Array(1, 9, 10, 13, 37)
     val testCTs = tests.map { i: Int =>
-      ImageIO.read3DScalarImage[Short](new File(dataDir + "test/" + i + ".nii"))
+      ImageIO.read3DScalarImage[Short](new File(dataDir + "test/" + i + ".nii")).get.map(_.toFloat)
     }
     val preprocessedTests = testCTs.map { img =>
       asm.preprocessor(img)
@@ -48,7 +48,8 @@ object FemurSegmentation {
     println("Loaded tests.")
 
     val targetCTs = targets.map { i: Int =>
-      ImageIO.read3DScalarImage[Short](new File(dataDir + "targets/" + i + ".nii"))
+      ImageIO.read3DScalarImage[Short](new File(dataDir + "targets/" + i + ".nii")).get.map(_
+        .toFloat)
     }
     val preprocessedTargets = targetCTs.map { img =>
       asm.preprocessor(img)
