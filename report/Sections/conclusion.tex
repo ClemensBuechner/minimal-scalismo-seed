@@ -5,7 +5,7 @@ We have implemented a working pipeline to get reconstructions of partial femur b
 The major issue we encountered is most likely based on our prior GP model generated from a kernel function.
 It is too flexible at the rough parts of the femur and too inflexible at the more detailed upper and lower part.
 We were not able to find a more accurate kernel function within the time range of the project.
-Some ideas discussed, which could possibly improve our kernel, are the following:
+Some ideas discussed which could possibly improve our kernel are the following:
 \begin{itemize}
   \item Kernel scaled individually in each dimension.
   \item Changepoint kernel varying smoothness depending on the position of a point.
@@ -13,9 +13,9 @@ Some ideas discussed, which could possibly improve our kernel, are the following
 
 Furthermore, if we had the possibility to spend more time on computing the interpolation models, the following ideas arise:
 \begin{itemize}
-  \item Use more or all points on the reference mesh instead of only a subset to compute the registration.
+  \item Use more points on the reference mesh instead of only a subset to compute the registration.
+  \item Find correspondence using Bayesian theory for fitting instead of ICP.
   \item Augment the interpolated model to make it smoother.
-   \item Find correspondence using Bayesian theory for fitting instead of ICP.
 \end{itemize}
 
 Unlike our model, we have actually learned a lot in this hands-on project: we managed to familiarize ourselves with Scalismo and deepened our understanding of the corresponding online course~\cite{mooc2019statistical}.

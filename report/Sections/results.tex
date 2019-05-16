@@ -8,7 +8,7 @@ In this section we present the outcome of our implementation.
 \subsection{Kernel Model}
 \label{subsec:kernmodel}
 
-For constructing a model to register the data, we ended up using the following kernel function: 
+For constructing a model to register the data, we ended up using the following: 
 $$ k(5, 20) + k(10, 50) + k(100, 200) $$
 where $k(s, \sigma)$ is a diagonal kernel of Gaussian kernels with variance $\sigma$ scaled with $s$. 
 \autoref{fig:kernel_model} shows its mean in orange and some samples of its variability in white.
@@ -18,7 +18,7 @@ where $k(s, \sigma)$ is a diagonal kernel of Gaussian kernels with variance $\si
   \includegraphics[width=\columnwidth]{./Figures/kernel_model_samples}
   \caption{
     The mean of our kernel model shown in orange. 
-    Alongside are shown some random samples of the model.}
+    Alongside, some random samples of the model are shown.}
   \label{fig:kernel_model}
 \end{figure}
 
@@ -26,7 +26,7 @@ where $k(s, \sigma)$ is a diagonal kernel of Gaussian kernels with variance $\si
 
 \subsection{Registrations}
 \label{subsec:registrresults}
-While in the end we are only interested in the distance between our reconstruction and the ground truth, we can also use our distance metrics as an indication of how closely our kernel model fits the training data. 
+While in the end we are only interested in the distance between our reconstruction and the ground truth, we can also use the distance metrics as an indication of how closely our kernel model fits the training data. 
 Hopefully, a better representation of our training data also leads to a better reconstruction of the partial bones. 
 
 The mean and standard deviation of the average and the Hausdorff distance are provided in \autoref{tbl:registration_distance}.
@@ -51,7 +51,7 @@ In \autoref{fig:registration_fit} you can see an example of the kernel model fit
 \begin{figure}
 	\centering
   \includegraphics[scale=0.7]{./Figures/registration_fit}
-  \caption{Example registration of the model to a bone from the training data. Training data in red, the aligned model in green.}
+  \caption{Example registration of the model to a bone from the training data}
   \label{fig:registration_fit}
 \end{figure}
 
@@ -66,7 +66,7 @@ In \autoref{fig:registration_fit} you can see an example of the kernel model fit
   \includegraphics[width=\columnwidth]{./Figures/interpolated_model_samples}
   \caption{
     The mean of our trained model shown in orange.
-    Alongside are shown some random samples of the model.}
+    Alongside, some random samples of the model are shown.}
   \label{fig:trained_model}
 \end{figure}
 
@@ -75,8 +75,8 @@ In \autoref{fig:registration_fit} you can see an example of the kernel model fit
 \subsection{Reconstruction of Partial Femurs}
 \label{subsec:reconresults}
 For the evaluation of the reconstruction of partial bones, we are interested in closely modelling the actual bone.
-In other words, we want our reconstruction and the ground truth data (not given to us) to be as close as possible. 
-This will be evaluated using both the average distance and the Hausdorff, both of which should ideally be as small as possible.
+In other words, we want our reconstruction and the ground truth data (not given to us) to be as close to each other as possible. 
+This will be evaluated using both the average and the Hausdorff distance, both of which should ideally be as small as possible.
 
 \autoref{fig:reconstructed} shows all ten partial femurs aligned to our reconstruction.
 The average distance and Hausdorff distance scores of the missing part can be found in \autoref{tbl:reconstructed_distance}.

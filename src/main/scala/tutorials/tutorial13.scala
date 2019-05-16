@@ -34,7 +34,6 @@ object tutorial13 {
 
     val imageView = ui.show(targetGroup, image, "image")
 
-    // TODO: UnsupportedClassVersionError: scalismo/image/BSplineCoefficients
     val preprocessedImage = asm.preprocessor(image)
 
     val point1 = image.domain.origin + EuclideanVector(10.0, 10.0, 10.0)
@@ -82,6 +81,7 @@ object tutorial13 {
 
     val finalMeshView = ui.show(targetGroup, finalMesh, "finalMesh")
 
+
     def likelihoodForMesh(asm : ActiveShapeModel, mesh : TriangleMesh[_3D], preprocessedImage: PreprocessedImage) : Double = {
 
       val ids = asm.profiles.ids
@@ -99,6 +99,5 @@ object tutorial13 {
     val sampleMesh2 = asm.statisticalModel.sample
     println("Likelihood for mesh 1 = " + likelihoodForMesh(asm, sampleMesh1, preprocessedImage))
     println("Likelihood for mesh 2 = " + likelihoodForMesh(asm, sampleMesh2, preprocessedImage))
-
   }
 }
