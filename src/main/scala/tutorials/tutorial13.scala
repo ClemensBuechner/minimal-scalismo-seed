@@ -41,5 +41,64 @@ object tutorial13 {
     val profile = asm.profiles.head
     val feature1 : DenseVector[Double] = asm.featureExtractor(preprocessedImage, point1, asm.statisticalModel.mean, profile.pointId).get
 
+    val point2 = image.domain.origin + EuclideanVector(20.0, 10.0, 10.0)
+    val featureVec1 = asm.featureExtractor(preprocessedImage, point1, asm.statisticalModel.mean, profile.pointId).get
+    val featureVec2 = asm.featureExtractor(preprocessedImage, point2, asm.statisticalModel.mean, profile.pointId).get
+
+    val probabilityPoint1 = profile.distribution.logpdf(featureVec1)
+    val probabilityPoint2 = profile.distribution.logpdf(featureVec2)
+
+    val searchSampler = NormalDirectionSearchPointSampler(numberOfPoints = 100, searchDistance = 3)
+
+    val config = FittingConfiguration(featureDistanceThreshold = 3, pointDistanceThreshold = 5, modelCoefficientBounds = 3)
+
+    // make sure we rotate around a reasonable center point
+    val modelBoundingBox = asm.statisticalModel.referenceMesh.boundingBox
+    val rotationCenter = modelBoundingBox.origin + modelBoundingBox.extent * 0.5
+
+    // we start with the identity transform
+    val translationTransformation = TranslationTransform(EuclideanVector(0, 0, 0))
+    val rotationTransformation = RotationTransform(0, 0, 0, rotationCenter)
+    val initialRigidTransformation = RigidTransformation(translationTransformation, rotationTransformation)
+    val initialModelCoefficients = DenseVector.zeros[Double](asm.statisticalModel.rank)
+    val initialTransformation = ModelTransformations(initialModelCoefficients, initialRigidTransformation)
+
+    val numberOfIterations = 20
+    val asmIterator = asm.fitIterator(image, searchSampler, numberOfIterations, config, initialTransformation)
+
+    val asmIteratorWithVisualization = asmIterator.map(it => {
+      it match {
+        case scala.util.Success(iterationResult) => {
+          modelView.shapeModelTransformationView.poseTransformationView.transformation = iterationResult.transformations.rigidTransform
+          modelView.shapeModelTransformationView.shapeTransformationView.coefficients = iterationResult.transformations.coefficients
+        }
+        case scala.util.Failure(error) => System.out.println(error.getMessage)
+      }
+      it
+    })
+
+    val result = asmIteratorWithVisualization.toIndexedSeq.last
+    val finalMesh = result.get.mesh
+
+    val finalMeshView = ui.show(targetGroup, finalMesh, "finalMesh")
+
+    def likelihoodForMesh(asm : ActiveShapeModel, mesh : TriangleMesh[_3D], preprocessedImage: PreprocessedImage) : Double = {
+
+      val ids = asm.profiles.ids
+
+      val likelihoods = for (id <- ids) yield {
+        val profile = asm.profiles(id)
+        val profilePointOnMesh = mesh.pointSet.point(profile.pointId)
+        val featureAtPoint = asm.featureExtractor(preprocessedImage, profilePointOnMesh, mesh, profile.pointId).get
+        profile.distribution.logpdf(featureAtPoint)
+      }
+      likelihoods.sum
+    }
+
+    val sampleMesh1 = asm.statisticalModel.sample
+    val sampleMesh2 = asm.statisticalModel.sample
+    println("Likelihood for mesh 1 = " + likelihoodForMesh(asm, sampleMesh1, preprocessedImage))
+    println("Likelihood for mesh 2 = " + likelihoodForMesh(asm, sampleMesh2, preprocessedImage))
+
   }
 }
