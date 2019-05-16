@@ -8,6 +8,7 @@ import scalismo.geometry.{EuclideanVector, Point3D, _3D}
 import scalismo.io.{ActiveShapeModelIO, ImageIO, MeshIO, StatisticalModelIO}
 import scalismo.registration.{RigidTransformation, RotationTransform, TranslationTransform}
 import scalismo.sampling.DistributionEvaluator
+import scalismo.statisticalmodel.asm.{FittingConfiguration, ModelTransformations, NormalDirectionSearchPointSampler}
 import scalismo.statisticalmodel.{MultivariateNormalDistribution, StatisticalMeshModel}
 import scalismo.ui.api.ScalismoUI
 import scalismo.utils.Memoize
@@ -34,29 +35,58 @@ object FemurSegmentation {
     })
     println("Loaded model.")
 
+    val searchPointSampler = NormalDirectionSearchPointSampler(numberOfPoints = 100,
+      searchDistance = 3)
+    val config = FittingConfiguration(featureDistanceThreshold = 3, pointDistanceThreshold = 5,
+      modelCoefficientBounds = 3)
+
+
     val tests = Array(4, 14, 23, 25, 30)
     val targets = Array(1, 9, 10, 13, 37)
-    val testCTs = tests.map { i: Int =>
-      ImageIO.read3DScalarImage[Short](new File(dataDir + "test/" + i + ".nii")).get.map(_.toFloat)
-    }
-    val preprocessedTests = testCTs.map { img =>
-      asm.preprocessor(img)
-    }
-    val testReferences = tests.map { i: Int =>
-      MeshIO.readMesh(new File(dataDir + "test/" + i + ".stl"))
-    }
-    println("Loaded tests.")
+    tests.foreach { i: Int =>
+      val image = ImageIO.read3DScalarImage[Short](new File(dataDir + "test/" + i + ".nii")).get
+        .map(_.toFloat)
+      val reference = MeshIO.readMesh(new File(dataDir + "test/" + i + ".stl"))
+      val preprocessedImage = asm.preprocessor(image)
 
-    val targetCTs = targets.map { i: Int =>
-      ImageIO.read3DScalarImage[Short](new File(dataDir + "targets/" + i + ".nii")).get.map(_
-        .toFloat)
-    }
-    val preprocessedTargets = targetCTs.map { img =>
-      asm.preprocessor(img)
-    }
-    println("Loaded targets.")
+      val modelBoundingBox = asm.statisticalModel.referenceMesh.boundingBox
+      val rotationCenter = modelBoundingBox.origin + modelBoundingBox.extent * 0.5
 
+      val translationTransformation = TranslationTransform(EuclideanVector(0, 0, 0))
+      val rotationTransformation = RotationTransform(0, 0, 0, rotationCenter)
+      val initialRigidTransformation = RigidTransformation(translationTransformation, rotationTransformation)
+      val initialModelCoefficients = DenseVector.zeros[Double](asm.statisticalModel.rank)
+      val initialTransformation = ModelTransformations(initialModelCoefficients, initialRigidTransformation)
 
+      val numberOfIterations = 20
+      val asmIterator = asm.fitIterator(image, searchPointSampler, numberOfIterations, config, initialTransformation)
+
+      val asmIteratorWithVisualization = asmIterator.map(it => {
+        it match {
+          case scala.util.Success(iterationResult) => {
+            modelView.shapeModelTransformationView.poseTransformationView.transformation = iterationResult.transformations.rigidTransform
+            modelView.shapeModelTransformationView.shapeTransformationView.coefficients = iterationResult.transformations.coefficients
+          }
+          case scala.util.Failure(error) => System.out.println(error.getMessage)
+        }
+        it
+      })
+    }
+
+    //    val targetCTs = targets.map { i: Int =>
+    //      ImageIO.read3DScalarImage[Short](new File(dataDir + "targets/" + i + ".nii")).get.map(_
+    //        .toFloat)
+    //    }
+    //    println("Loaded targets.")
+    //
+    //
+    //
+    //    val preprocessedTests = testCTs.map { img =>
+    //      asm.preprocessor(img)
+    //    }
+    //    val preprocessedTargets = targetCTs.map { img =>
+    //      asm.preprocessor(img)
+    //    }
   }
 }
 
