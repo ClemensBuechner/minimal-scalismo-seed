@@ -1,5 +1,6 @@
 package segmentationProject
 
+import java.awt.Color
 import java.io.File
 
 import breeze.linalg.{DenseMatrix, DenseVector}
@@ -17,6 +18,8 @@ import scalismo.statisticalmodel.asm.{ActiveShapeModel, PreprocessedImage}
 import scalismo.statisticalmodel.{MultivariateNormalDistribution, StatisticalMeshModel}
 import scalismo.ui.api.ScalismoUI
 import scalismo.utils.Memoize
+
+import scala.io.StdIn
 
 
 object secondTry {
@@ -44,130 +47,77 @@ object secondTry {
 
     val model = asm.statisticalModel
 
-    val image = ImageIO.read3DScalarImage[Short](new File(dataDir + "test/4.nii")).get.map(_
-      .toFloat)
-    val imgView = ui.show(modelGroup, image, "image")
-    val preprocessedImage = asm.preprocessor(image)
+    val tests = Array(4, 14, 23, 25, 30)
+    val targets = Array(1, 9, 10, 13, 37)
 
+    tests.foreach { i: Int =>
 
-    val likelihoodEvaluator = CachedEvaluator(ActiveShapeModelEvaluator(model, asm,
-      preprocessedImage))
-    val priorEvaluator = CachedEvaluator(PriorEvaluator(model))
+      val image = ImageIO.read3DScalarImage[Short](new File(dataDir + "test/" + i + ".nii")).get
+        .map(_.toFloat)
+      val reference = MeshIO.readMesh(new File(dataDir + "test/" + i + ".stl")).get
 
-    val posteriorEvaluator = ProductEvaluator(priorEvaluator, likelihoodEvaluator)
-    
-    val shapeUpdateProposal = ShapeUpdateProposal(model.rank, 0.1)
-    val rotationUpdateProposal = RotationUpdateProposal(0.01)
-    val translationUpdateProposal = TranslationUpdateProposal(1.0)
-    val generator = MixtureProposal.fromProposalsWithTransition(
-      (0.6, shapeUpdateProposal), (0.2, rotationUpdateProposal), (0.2, translationUpdateProposal)
-    )
+      val testGroup = ui.createGroup("test_" + i)
+      val imgView = ui.show(testGroup, image, "image")
+      val refView = ui.show(testGroup, reference, "reference")
+      refView.color = Color.GREEN
 
-    class Logger extends AcceptRejectLogger[Sample] {
-      private val numAccepted = collection.mutable.Map[String, Int]()
-      private val numRejected = collection.mutable.Map[String, Int]()
+      val preprocessedImage = asm.preprocessor(image)
 
-      override def accept(current: Sample,
-                          sample: Sample,
-                          generator: ProposalGenerator[Sample],
-                          evaluator: DistributionEvaluator[Sample]
-                         ): Unit = {
-        val numAcceptedSoFar = numAccepted.getOrElseUpdate(sample.generatedBy, 0)
-        numAccepted.update(sample.generatedBy, numAcceptedSoFar + 1)
-      }
+      val likelihoodEvaluator = CachedEvaluator(ActiveShapeModelEvaluator(model, asm,
+        preprocessedImage))
+      val priorEvaluator = CachedEvaluator(PriorEvaluator(model))
 
-      override def reject(current: Sample,
-                          sample: Sample,
-                          generator: ProposalGenerator[Sample],
-                          evaluator: DistributionEvaluator[Sample]
-                         ): Unit = {
-        val numRejectedSoFar = numRejected.getOrElseUpdate(sample.generatedBy, 0)
-        numRejected.update(sample.generatedBy, numRejectedSoFar + 1)
-      }
+      val posteriorEvaluator = ProductEvaluator(priorEvaluator, likelihoodEvaluator)
 
+      val shapeUpdateProposal = ShapeUpdateProposal(model.rank, 0.1)
+      val rotationUpdateProposal = RotationUpdateProposal(0.01)
+      val translationUpdateProposal = TranslationUpdateProposal(1.0)
+      val generator = MixtureProposal.fromProposalsWithTransition(
+        (0.6, shapeUpdateProposal), (0.2, rotationUpdateProposal), (0.2, translationUpdateProposal)
+      )
 
-      def acceptanceRatios(): Map[String, Double] = {
-        val generatorNames = numRejected.keys.toSet.union(numAccepted.keys.toSet)
-        val acceptanceRatios = for (generatorName <- generatorNames) yield {
-          val total = (numAccepted.getOrElse(generatorName, 0)
-            + numRejected.getOrElse(generatorName, 0)).toDouble
-          (generatorName, numAccepted.getOrElse(generatorName, 0) / total)
+      val initialParameters = Parameters(
+        EuclideanVector(0, 0, 0),
+        (0.0, 0.0, 0.0),
+        DenseVector.zeros[Double](model.rank)
+      )
+
+      val initialSample = Sample("initial", initialParameters, computeCenterOfMass(model.mean))
+
+      val chain = MetropolisHastings(generator, posteriorEvaluator)
+      val logger = new Logger()
+      val mhIterator = chain.iterator(initialSample, logger)
+
+      val samplingIterator = for ((sample, iteration) <- mhIterator.zipWithIndex) yield {
+        println("iteration " + iteration)
+        if (iteration % 300 == 0) {
+          modelView.shapeModelTransformationView.shapeTransformationView.coefficients = sample
+            .parameters.modelCoefficients
+          modelView.shapeModelTransformationView.poseTransformationView.transformation = sample
+            .poseTransformation
         }
-        acceptanceRatios.toMap
+        sample
       }
-    }
 
-    def computeCenterOfMass(mesh: TriangleMesh[_3D]): Point[_3D] = {
-      val normFactor = 1.0 / mesh.pointSet.numberOfPoints
-      mesh.pointSet.points.foldLeft(Point(0, 0, 0))((sum, point) => sum + point.toVector *
-        normFactor)
-    }
+      val samples = samplingIterator.drop(1000).take(10000).toIndexedSeq
 
 
-    val initialParameters = Parameters(
-      EuclideanVector(0, 0, 0),
-      (0.0, 0.0, 0.0),
-      DenseVector.zeros[Double](model.rank)
-    )
+      println(logger.acceptanceRatios())
+      // Map(RotationUpdateProposal (0.01) -> 0.6971894832275612, TranlationUpdateProposal (1.0) ->
+      // 0.5043859649122807, ShapeUpdateProposal (0.1) -> 0.7907262398280362)
 
-    val initialSample = Sample("initial", initialParameters, computeCenterOfMass(model.mean))
+      val bestSample = samples.maxBy(posteriorEvaluator.logValue)
+      val bestFit = model.instance(bestSample.parameters.modelCoefficients).transform(bestSample
+        .poseTransformation)
+      val resultGroup = ui.createGroup("result")
+      ui.show(resultGroup, bestFit, "best fit")
 
-    val chain = MetropolisHastings(generator, posteriorEvaluator)
-    val logger = new Logger()
-    val mhIterator = chain.iterator(initialSample, logger)
+      val dist = scalismo.mesh.MeshMetrics.avgDistance(bestFit, reference)
+      val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(bestFit, reference)
+      println("Average Distance: " + dist)
+      println("Hausdorff Distance: " + hausDist)
 
-    val samplingIterator = for ((sample, iteration) <- mhIterator.zipWithIndex) yield {
-      println("iteration " + iteration)
-      if (iteration % 500 == 0) {
-        modelView.shapeModelTransformationView.shapeTransformationView.coefficients = sample
-          .parameters.modelCoefficients
-        modelView.shapeModelTransformationView.poseTransformationView.transformation = sample
-          .poseTransformation
-      }
-      sample
-    }
-
-    val samples = samplingIterator.drop(1000).take(10000).toIndexedSeq
-
-    println(logger.acceptanceRatios())
-    // Map(RotationUpdateProposal (0.01) -> 0.6971894832275612, TranslationUpdateProposal (1.0) ->
-    // 0.5043859649122807, ShapeUpdateProposal (0.1) -> 0.7907262398280362)
-
-    val bestSample = samples.maxBy(posteriorEvaluator.logValue)
-    val bestFit = model.instance(bestSample.parameters.modelCoefficients).transform(bestSample
-      .poseTransformation)
-    val resultGroup = ui.createGroup("result")
-    ui.show(resultGroup, bestFit, "best fit")
-
-    val groundTruth = MeshIO.readMesh(new File(dataDir+"test/4.stl")).get
-    ui.show(resultGroup, groundTruth, "ground truth")
-
-    val dist = scalismo.mesh.MeshMetrics.avgDistance(bestFit, groundTruth)
-    val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(bestFit, groundTruth)
-    println("Average Distance: " + dist)
-    println("Hausdorff Distance: " + hausDist)
-
-
-    def computeMean(model: StatisticalMeshModel, id: PointId): Point[_3D] = {
-      var mean = EuclideanVector(0, 0, 0)
-      for (sample <- samples) yield {
-        val modelInstance = model.instance(sample.parameters.modelCoefficients)
-        val pointForInstance = modelInstance.transform(sample.poseTransformation).pointSet.point(id)
-        mean += pointForInstance.toVector
-      }
-      (mean * 1.0 / samples.size).toPoint
-    }
-
-    def computeCovarianceFromSamples(model: StatisticalMeshModel, id: PointId, mean: Point[_3D])
-    : SquareMatrix[_3D] = {
-      var cov = SquareMatrix.zeros[_3D]
-      for (sample <- samples) yield {
-        val modelInstance = model.instance(sample.parameters.modelCoefficients)
-        val pointForInstance = modelInstance.transform(sample.poseTransformation).pointSet.point(id)
-        val v = pointForInstance - mean
-        cov += v.outer(v)
-      }
-      cov * (1.0 / samples.size)
+      StdIn.readLine("Show next fit.")
     }
 
     //    val (marginalizedModel, newCorrespondences) = marginalizeModelForCorrespondences(model,
@@ -227,6 +177,38 @@ object secondTry {
     // posterior variance computed by analytic posterior (shape only) for point with id PointId
     // (5) = 1.7511296018408746, 2.2802845887546255, 2.505733093422708
   }
+
+  def computeCenterOfMass(mesh: TriangleMesh[_3D]): Point[_3D] = {
+    val normFactor = 1.0 / mesh.pointSet.numberOfPoints
+    mesh.pointSet.points.foldLeft(Point(0, 0, 0))((sum, point) => sum + point.toVector *
+      normFactor)
+  }
+
+  //  def computeMean(model: StatisticalMeshModel, id: PointId, samples: Seq[Sample]): Point[_3D]
+  //  = {
+  //    var mean = EuclideanVector(0, 0, 0)
+  //    for (sample <- samples) yield {
+  //      val modelInstance = model.instance(sample.parameters.modelCoefficients)
+  //      val pointForInstance = modelInstance.transform(sample.poseTransformation).pointSet
+  //      .point(id)
+  //      mean += pointForInstance.toVector
+  //    }
+  //    (mean * 1.0 / samples.size).toPoint
+  //  }
+  //
+  //  def computeCovarianceFromSamples(model: StatisticalMeshModel, id: PointId, mean: Point[_3D],
+  //                                   samples: Seq[Sample]): SquareMatrix[_3D] = {
+  //
+  //    var cov = SquareMatrix.zeros[_3D]
+  //    for (sample <- samples) yield {
+  //      val modelInstance = model.instance(sample.parameters.modelCoefficients)
+  //      val pointForInstance = modelInstance.transform(sample.poseTransformation).pointSet
+  //      .point(id)
+  //      val v = pointForInstance - mean
+  //      cov += v.outer(v)
+  //    }
+  //    cov * (1.0 / samples.size)
+  //  }
 }
 
 case class Parameters(translationParameters: EuclideanVector[_3D],
@@ -405,5 +387,39 @@ case class TranslationUpdateProposal(stddev: Double) extends
   override def logTransitionProbability(from: Sample, to: Sample) = {
     val residual = to.parameters.translationParameters - from.parameters.translationParameters
     perturbationDistr.logpdf(residual.toBreezeVector)
+  }
+}
+
+class Logger extends AcceptRejectLogger[Sample] {
+  private val numAccepted = collection.mutable.Map[String, Int]()
+  private val numRejected = collection.mutable.Map[String, Int]()
+
+  override def accept(current: Sample,
+                      sample: Sample,
+                      generator: ProposalGenerator[Sample],
+                      evaluator: DistributionEvaluator[Sample]
+                     ): Unit = {
+    val numAcceptedSoFar = numAccepted.getOrElseUpdate(sample.generatedBy, 0)
+    numAccepted.update(sample.generatedBy, numAcceptedSoFar + 1)
+  }
+
+  override def reject(current: Sample,
+                      sample: Sample,
+                      generator: ProposalGenerator[Sample],
+                      evaluator: DistributionEvaluator[Sample]
+                     ): Unit = {
+    val numRejectedSoFar = numRejected.getOrElseUpdate(sample.generatedBy, 0)
+    numRejected.update(sample.generatedBy, numRejectedSoFar + 1)
+  }
+
+
+  def acceptanceRatios(): Map[String, Double] = {
+    val generatorNames = numRejected.keys.toSet.union(numAccepted.keys.toSet)
+    val acceptanceRatios = for (generatorName <- generatorNames) yield {
+      val total = (numAccepted.getOrElse(generatorName, 0)
+        + numRejected.getOrElse(generatorName, 0)).toDouble
+      (generatorName, numAccepted.getOrElse(generatorName, 0) / total)
+    }
+    acceptanceRatios.toMap
   }
 }
