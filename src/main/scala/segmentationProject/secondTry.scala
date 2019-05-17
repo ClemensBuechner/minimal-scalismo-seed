@@ -95,11 +95,17 @@ object secondTry {
             .parameters.modelCoefficients
           modelView.shapeModelTransformationView.poseTransformationView.transformation = sample
             .poseTransformation
+          val dist = scalismo.mesh.MeshMetrics.avgDistance(model.instance(sample.parameters.modelCoefficients).transform(sample
+            .poseTransformation), reference)
+          val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(model.instance(sample.parameters.modelCoefficients).transform(sample
+            .poseTransformation), reference)
+          println("Average Distance: " + dist)
+          println("Hausdorff Distance: " + hausDist)
         }
         sample
       }
 
-      val samples = samplingIterator.drop(1000).take(10000).toIndexedSeq
+      val samples = samplingIterator.drop(1000).take(2000).toIndexedSeq
 
 
       println(logger.acceptanceRatios())
@@ -327,7 +333,6 @@ case class ShapeUpdateProposal(paramVectorSize: Int, stddev: Double) extends
   implicit val rng = scalismo.utils.Random(42)
 
   override def propose(sample: Sample): Sample = {
-    val perturbation = perturbationDistr.sample()
     val newParameters = sample.parameters.copy(modelCoefficients = sample.parameters
       .modelCoefficients + perturbationDistr.sample)
     sample.copy(generatedBy = s"ShapeUpdateProposal ($stddev)", parameters = newParameters)
