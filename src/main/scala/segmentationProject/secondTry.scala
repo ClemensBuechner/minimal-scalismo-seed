@@ -45,12 +45,12 @@ object secondTry {
     })
     println("Loaded model.")
 
-    val model = asm.statisticalModel
-
     val tests = Array(4, 14, 23, 25, 30)
     val targets = Array(1, 9, 10, 13, 37)
 
     tests.foreach { i: Int =>
+
+      val model = asm.statisticalModel
 
       val image = ImageIO.read3DScalarImage[Short](new File(dataDir + "test/" + i + ".nii")).get
         .map(_.toFloat)
@@ -72,15 +72,15 @@ object secondTry {
       val shapeUpdateProposal = ShapeUpdateProposal(model.rank, 0.1)
       val rotationUpdateProposal = RotationUpdateProposal(0.01)
       val translationUpdateProposal = TranslationUpdateProposal(1.0)
+      //      val shapeUpdateProposal = ShapeUpdateProposal(model.rank, 0.9)
+      //      val rotationUpdateProposal = RotationUpdateProposal(0.01)
+      //      val translationUpdateProposal = TranslationUpdateProposal(2.0)
       val generator = MixtureProposal.fromProposalsWithTransition(
         (0.6, shapeUpdateProposal), (0.2, rotationUpdateProposal), (0.2, translationUpdateProposal)
       )
 
-      val initialParameters = Parameters(
-        EuclideanVector(0, 0, 0),
-        (0.0, 0.0, 0.0),
-        DenseVector.zeros[Double](model.rank)
-      )
+      val initialParameters = Parameters(EuclideanVector(0, 0, 0), (0.0, 0.0, 0.0),
+        DenseVector.zeros[Double](model.rank))
 
       val initialSample = Sample("initial", initialParameters, computeCenterOfMass(model.mean))
 
@@ -115,15 +115,15 @@ object secondTry {
       val bestSample = samples.maxBy(posteriorEvaluator.logValue)
       val bestFit = model.instance(bestSample.parameters.modelCoefficients).transform(bestSample
         .poseTransformation)
-      val resultGroup = ui.createGroup("result")
-      ui.show(resultGroup, bestFit, "best fit")
+      ui.show(testGroup, bestFit, "best fit")
 
       val dist = scalismo.mesh.MeshMetrics.avgDistance(bestFit, reference)
       val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(bestFit, reference)
       println("Average Distance: " + dist)
       println("Hausdorff Distance: " + hausDist)
 
-      StdIn.readLine("Show next fit.")
+      StdIn.readLine("Show next fit?")
+      //      ui.setVisibility(imgView,)
     }
 
     //    val (marginalizedModel, newCorrespondences) = marginalizeModelForCorrespondences(model,
@@ -333,6 +333,7 @@ case class ShapeUpdateProposal(paramVectorSize: Int, stddev: Double) extends
   implicit val rng = scalismo.utils.Random(42)
 
   override def propose(sample: Sample): Sample = {
+    val perturbation = perturbationDistr.sample()
     val newParameters = sample.parameters.copy(modelCoefficients = sample.parameters
       .modelCoefficients + perturbationDistr.sample)
     sample.copy(generatedBy = s"ShapeUpdateProposal ($stddev)", parameters = newParameters)
