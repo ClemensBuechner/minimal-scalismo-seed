@@ -19,6 +19,7 @@ object tutorial15 {
 
   def main(args: Array[String]): Unit = {
 
+    //Initialization
     implicit val rng = scalismo.utils.Random(42)
     scalismo.initialize()
 
@@ -30,6 +31,7 @@ object tutorial15 {
     val modelView = ui.show(modelGroup, model, "model")
     modelView.meshView.opacity = 0.5
 
+    //Landmarks
     val modelLms = LandmarkIO.readLandmarksJson[_3D](new java.io.File("datasets/modelLM_mcmc.json")).get
     val modelLmViews = ui.show(modelGroup, modelLms, "modelLandmarks")
     modelLmViews.foreach(lmView => lmView.color = java.awt.Color.BLUE)

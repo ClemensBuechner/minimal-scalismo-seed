@@ -133,8 +133,8 @@ object FemurReconstruction {
       println("Loaded shape model.")
       model
     } else {
-      val kernel = createUniformKernel(5, 20) + createUniformKernel(10, 50) +
-        createUniformKernel(50, 200)
+      val kernel = createUniformKernel(5, 20) + createUniformKernel(5, 50) +
+        createUniformKernel(20, 200)
       val model = shapeModelFromKernel(reference, kernel).truncate(100)
 
       StatisticalModelIO.writeStatisticalMeshModel(model, file)

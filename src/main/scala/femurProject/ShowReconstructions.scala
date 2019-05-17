@@ -1,5 +1,6 @@
 package femurProject
 
+import java.awt
 import java.awt.Color
 import java.io.File
 
@@ -16,6 +17,7 @@ object ShowReconstructions {
 
     scalismo.initialize()
     val ui = ScalismoUI()
+
 
     val partialFiles = new File("data/femora/partial/").listFiles().sorted
     val reconstructionFiles = new File("data/femora/reconstructions").listFiles().sorted

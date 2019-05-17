@@ -76,9 +76,11 @@ object tutorial13 {
       it
     })
 
-    // stop
     val result = asmIteratorWithVisualization.toIndexedSeq.last
     val finalMesh = result.get.mesh
+
+    val finalMeshView = ui.show(targetGroup, finalMesh, "finalMesh")
+
 
     def likelihoodForMesh(asm : ActiveShapeModel, mesh : TriangleMesh[_3D], preprocessedImage: PreprocessedImage) : Double = {
 
