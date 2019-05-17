@@ -24,6 +24,7 @@ object secondTry {
   def main(args: Array[String]): Unit = {
 
     implicit val rng = scalismo.utils.Random(42)
+
     scalismo.initialize()
     val ui = ScalismoUI()
 
@@ -48,110 +49,6 @@ object secondTry {
     val imgView = ui.show(modelGroup, image, "image")
     val preprocessedImage = asm.preprocessor(image)
 
-    case class Parameters(translationParameters: EuclideanVector[_3D],
-                          rotationParameters: (Double, Double, Double),
-                          modelCoefficients: DenseVector[Double])
-
-    case class Sample(generatedBy: String, parameters: Parameters, rotationCenter: Point[_3D]) {
-      def poseTransformation: RigidTransformation[_3D] = {
-
-        val translation = TranslationTransform(parameters.translationParameters)
-        val rotation = RotationTransform(
-          parameters.rotationParameters._1,
-          parameters.rotationParameters._2,
-          parameters.rotationParameters._3,
-          rotationCenter
-        )
-        RigidTransformation(translation, rotation)
-      }
-    }
-
-    case class PriorEvaluator(model: StatisticalMeshModel) extends DistributionEvaluator[Sample] {
-
-      val translationPrior = breeze.stats.distributions.Gaussian(0.0, 5.0)
-      val rotationPrior = breeze.stats.distributions.Gaussian(0, 0.1)
-
-      override def logValue(sample: Sample): Double = {
-        model.gp.logpdf(sample.parameters.modelCoefficients) +
-          translationPrior.logPdf(sample.parameters.translationParameters.x) +
-          translationPrior.logPdf(sample.parameters.translationParameters.y) +
-          translationPrior.logPdf(sample.parameters.translationParameters.z) +
-          rotationPrior.logPdf(sample.parameters.rotationParameters._1) +
-          rotationPrior.logPdf(sample.parameters.rotationParameters._2) +
-          rotationPrior.logPdf(sample.parameters.rotationParameters._3)
-      }
-    }
-
-    case class ActiveShapeModelEvaluator(model: StatisticalMeshModel, asm: ActiveShapeModel,
-                                         preprocessedImage: PreprocessedImage) extends
-      DistributionEvaluator[Sample] {
-
-      override def logValue(sample: Sample): Double = {
-
-        val ids = asm.profiles.ids
-        val mesh = model.instance(sample.parameters.modelCoefficients).transform(sample
-          .poseTransformation)
-
-        val likelihoods = for (id <- ids) yield {
-          val profile = asm.profiles(id)
-          val profilePointOnMesh = mesh.pointSet.point(profile.pointId)
-          val featureAtPoint = asm.featureExtractor(preprocessedImage, profilePointOnMesh, mesh,
-            profile.pointId).get
-          profile.distribution.logpdf(featureAtPoint)
-        }
-        likelihoods.sum
-      }
-    }
-
-    def marginalizeModelForCorrespondences(model: StatisticalMeshModel, correspondences: Seq[
-      (PointId, Point[_3D], MultivariateNormalDistribution)]): (StatisticalMeshModel, Seq[
-      (PointId, Point[_3D], MultivariateNormalDistribution)]) = {
-
-      val (modelIds, _, _) = correspondences.unzip3
-      val marginalizedModel = model.marginal(modelIds.toIndexedSeq)
-      val newCorrespondences = correspondences.map(idWithTargetPoint => {
-        val (id, targetPoint, uncertainty) = idWithTargetPoint
-        val modelPoint = model.referenceMesh.pointSet.point(id)
-        val newId = marginalizedModel.referenceMesh.pointSet.findClosestPoint(modelPoint).id
-        (newId, targetPoint, uncertainty)
-      })
-      (marginalizedModel, newCorrespondences)
-    }
-
-    case class CorrespondenceEvaluator(model: StatisticalMeshModel, correspondences: Seq[
-      (PointId, Point[_3D], MultivariateNormalDistribution)]) extends
-      DistributionEvaluator[Sample] {
-
-      val (marginalizedModel, newCorrespondences) = marginalizeModelForCorrespondences(model,
-        correspondences)
-
-      override def logValue(sample: Sample): Double = {
-
-        val currModelInstance = marginalizedModel.instance(sample.parameters.modelCoefficients)
-          .transform(sample.poseTransformation)
-
-        val likelihoods = newCorrespondences.map(correspondence => {
-          val (id, targetPoint, uncertainty) = correspondence
-          val modelInstancePoint = currModelInstance.pointSet.point(id)
-          val observedDeformation = targetPoint - modelInstancePoint
-
-          uncertainty.logpdf(observedDeformation.toBreezeVector)
-        })
-
-
-        val loglikelihood = likelihoods.sum
-        loglikelihood
-      }
-    }
-
-    case class CachedEvaluator[A](evaluator: DistributionEvaluator[A]) extends
-      DistributionEvaluator[A] {
-      val memoizedLogValue = Memoize(evaluator.logValue, 10)
-
-      override def logValue(sample: A): Double = {
-        memoizedLogValue(sample)
-      }
-    }
 
     val likelihoodEvaluator = CachedEvaluator(ActiveShapeModelEvaluator(model, asm,
       preprocessedImage))
@@ -159,81 +56,12 @@ object secondTry {
 
     val posteriorEvaluator = ProductEvaluator(priorEvaluator, likelihoodEvaluator)
 
-    case class ShapeUpdateProposal(paramVectorSize: Int, stddev: Double) extends
-      ProposalGenerator[Sample] with TransitionProbability[Sample] {
-
-      val perturbationDistr = new MultivariateNormalDistribution(
-        DenseVector.zeros(paramVectorSize),
-        DenseMatrix.eye[Double](paramVectorSize) * stddev * stddev
-      )
-
-
-      override def propose(sample: Sample): Sample = {
-        val perturbation = perturbationDistr.sample()
-        val newParameters = sample.parameters.copy(modelCoefficients = sample.parameters
-          .modelCoefficients + perturbationDistr.sample)
-        sample.copy(generatedBy = s"ShapeUpdateProposal ($stddev)", parameters = newParameters)
-      }
-
-      override def logTransitionProbability(from: Sample, to: Sample) = {
-        val residual = to.parameters.modelCoefficients - from.parameters.modelCoefficients
-        perturbationDistr.logpdf(residual)
-      }
-    }
-
-    case class RotationUpdateProposal(stddev: Double) extends
-      ProposalGenerator[Sample] with TransitionProbability[Sample] {
-      val perturbationDistr = new MultivariateNormalDistribution(
-        DenseVector.zeros[Double](3),
-        DenseMatrix.eye[Double](3) * stddev * stddev)
-
-      def propose(sample: Sample): Sample = {
-        val perturbation = perturbationDistr.sample
-        val newRotationParameters = (
-          sample.parameters.rotationParameters._1 + perturbation(0),
-          sample.parameters.rotationParameters._2 + perturbation(1),
-          sample.parameters.rotationParameters._3 + perturbation(2)
-        )
-        val newParameters = sample.parameters.copy(rotationParameters = newRotationParameters)
-        sample.copy(generatedBy = s"RotationUpdateProposal ($stddev)", parameters = newParameters)
-      }
-
-      override def logTransitionProbability(from: Sample, to: Sample) = {
-        val residual = DenseVector(
-          to.parameters.rotationParameters._1 - from.parameters.rotationParameters._1,
-          to.parameters.rotationParameters._2 - from.parameters.rotationParameters._2,
-          to.parameters.rotationParameters._3 - from.parameters.rotationParameters._3
-        )
-        perturbationDistr.logpdf(residual)
-      }
-    }
-
-    case class TranslationUpdateProposal(stddev: Double) extends
-      ProposalGenerator[Sample] with TransitionProbability[Sample] {
-
-      val perturbationDistr = new MultivariateNormalDistribution(DenseVector.zeros(3),
-        DenseMatrix.eye[Double](3) * stddev * stddev)
-
-      def propose(sample: Sample): Sample = {
-        val newTranslationParameters = sample.parameters.translationParameters + EuclideanVector
-          .fromBreezeVector(perturbationDistr.sample())
-        val newParameters = sample.parameters.copy(translationParameters = newTranslationParameters)
-        sample.copy(generatedBy = s"TranlationUpdateProposal ($stddev)", parameters = newParameters)
-      }
-
-      override def logTransitionProbability(from: Sample, to: Sample) = {
-        val residual = to.parameters.translationParameters - from.parameters.translationParameters
-        perturbationDistr.logpdf(residual.toBreezeVector)
-      }
-    }
 
     val shapeUpdateProposal = ShapeUpdateProposal(model.rank, 0.1)
     val rotationUpdateProposal = RotationUpdateProposal(0.01)
     val translationUpdateProposal = TranslationUpdateProposal(1.0)
     val generator = MixtureProposal.fromProposalsWithTransition(
-      (0.6, shapeUpdateProposal),
-      (0.2, rotationUpdateProposal),
-      (0.2, translationUpdateProposal)
+      (0.6, shapeUpdateProposal), (0.2, rotationUpdateProposal), (0.2, translationUpdateProposal)
     )
 
     class Logger extends AcceptRejectLogger[Sample] {
@@ -390,5 +218,184 @@ object secondTry {
     // (4) = 1.74656771644886, 2.315887303162952, 2.494671632799402
     // posterior variance computed by analytic posterior (shape only) for point with id PointId
     // (5) = 1.7511296018408746, 2.2802845887546255, 2.505733093422708
+  }
+}
+
+case class Parameters(translationParameters: EuclideanVector[_3D],
+                      rotationParameters: (Double, Double, Double),
+                      modelCoefficients: DenseVector[Double])
+
+case class Sample(generatedBy: String, parameters: Parameters, rotationCenter: Point[_3D]) {
+  def poseTransformation: RigidTransformation[_3D] = {
+
+    val translation = TranslationTransform(parameters.translationParameters)
+    val rotation = RotationTransform(
+      parameters.rotationParameters._1,
+      parameters.rotationParameters._2,
+      parameters.rotationParameters._3,
+      rotationCenter
+    )
+    RigidTransformation(translation, rotation)
+  }
+}
+
+case class PriorEvaluator(model: StatisticalMeshModel) extends DistributionEvaluator[Sample] {
+
+  val translationPrior = breeze.stats.distributions.Gaussian(0.0, 5.0)
+  val rotationPrior = breeze.stats.distributions.Gaussian(0, 0.1)
+
+  override def logValue(sample: Sample): Double = {
+    model.gp.logpdf(sample.parameters.modelCoefficients) +
+      translationPrior.logPdf(sample.parameters.translationParameters.x) +
+      translationPrior.logPdf(sample.parameters.translationParameters.y) +
+      translationPrior.logPdf(sample.parameters.translationParameters.z) +
+      rotationPrior.logPdf(sample.parameters.rotationParameters._1) +
+      rotationPrior.logPdf(sample.parameters.rotationParameters._2) +
+      rotationPrior.logPdf(sample.parameters.rotationParameters._3)
+  }
+}
+
+case class ActiveShapeModelEvaluator(model: StatisticalMeshModel, asm: ActiveShapeModel,
+                                     preprocessedImage: PreprocessedImage) extends
+  DistributionEvaluator[Sample] {
+
+  override def logValue(sample: Sample): Double = {
+
+    val ids = asm.profiles.ids
+    val mesh = model.instance(sample.parameters.modelCoefficients).transform(sample
+      .poseTransformation)
+
+    val likelihoods = for (id <- ids) yield {
+      val profile = asm.profiles(id)
+      val profilePointOnMesh = mesh.pointSet.point(profile.pointId)
+      val featureAtPoint = asm.featureExtractor(preprocessedImage, profilePointOnMesh, mesh,
+        profile.pointId).get
+      profile.distribution.logpdf(featureAtPoint)
+    }
+    likelihoods.sum
+  }
+}
+
+case class CorrespondenceEvaluator(model: StatisticalMeshModel, correspondences: Seq[
+  (PointId, Point[_3D], MultivariateNormalDistribution)]) extends
+  DistributionEvaluator[Sample] {
+
+  val (marginalizedModel, newCorrespondences) = marginalizeModelForCorrespondences(model,
+    correspondences)
+
+  def marginalizeModelForCorrespondences(model: StatisticalMeshModel, correspondences: Seq[
+    (PointId, Point[_3D], MultivariateNormalDistribution)]): (StatisticalMeshModel, Seq[
+    (PointId, Point[_3D], MultivariateNormalDistribution)]) = {
+
+    val (modelIds, _, _) = correspondences.unzip3
+    val marginalizedModel = model.marginal(modelIds.toIndexedSeq)
+    val newCorrespondences = correspondences.map(idWithTargetPoint => {
+      val (id, targetPoint, uncertainty) = idWithTargetPoint
+      val modelPoint = model.referenceMesh.pointSet.point(id)
+      val newId = marginalizedModel.referenceMesh.pointSet.findClosestPoint(modelPoint).id
+      (newId, targetPoint, uncertainty)
+    })
+    (marginalizedModel, newCorrespondences)
+  }
+
+  override def logValue(sample: Sample): Double = {
+
+    val currModelInstance = marginalizedModel.instance(sample.parameters.modelCoefficients)
+      .transform(sample.poseTransformation)
+
+    val likelihoods = newCorrespondences.map(correspondence => {
+      val (id, targetPoint, uncertainty) = correspondence
+      val modelInstancePoint = currModelInstance.pointSet.point(id)
+      val observedDeformation = targetPoint - modelInstancePoint
+
+      uncertainty.logpdf(observedDeformation.toBreezeVector)
+    })
+
+
+    val loglikelihood = likelihoods.sum
+    loglikelihood
+  }
+}
+
+case class CachedEvaluator[A](evaluator: DistributionEvaluator[A]) extends
+  DistributionEvaluator[A] {
+  val memoizedLogValue = Memoize(evaluator.logValue, 10)
+
+  override def logValue(sample: A): Double = {
+    memoizedLogValue(sample)
+  }
+}
+
+case class ShapeUpdateProposal(paramVectorSize: Int, stddev: Double) extends
+  ProposalGenerator[Sample] with TransitionProbability[Sample] {
+
+  val perturbationDistr = new MultivariateNormalDistribution(
+    DenseVector.zeros(paramVectorSize),
+    DenseMatrix.eye[Double](paramVectorSize) * stddev * stddev
+  )
+
+  implicit val rng = scalismo.utils.Random(42)
+
+  override def propose(sample: Sample): Sample = {
+    val perturbation = perturbationDistr.sample()
+    val newParameters = sample.parameters.copy(modelCoefficients = sample.parameters
+      .modelCoefficients + perturbationDistr.sample)
+    sample.copy(generatedBy = s"ShapeUpdateProposal ($stddev)", parameters = newParameters)
+  }
+
+  override def logTransitionProbability(from: Sample, to: Sample) = {
+    val residual = to.parameters.modelCoefficients - from.parameters.modelCoefficients
+    perturbationDistr.logpdf(residual)
+  }
+}
+
+case class RotationUpdateProposal(stddev: Double) extends
+  ProposalGenerator[Sample] with TransitionProbability[Sample] {
+
+  val perturbationDistr = new MultivariateNormalDistribution(
+    DenseVector.zeros[Double](3),
+    DenseMatrix.eye[Double](3) * stddev * stddev)
+
+  implicit val rng = scalismo.utils.Random(42)
+
+  def propose(sample: Sample): Sample = {
+    val perturbation = perturbationDistr.sample
+    val newRotationParameters = (
+      sample.parameters.rotationParameters._1 + perturbation(0),
+      sample.parameters.rotationParameters._2 + perturbation(1),
+      sample.parameters.rotationParameters._3 + perturbation(2)
+    )
+    val newParameters = sample.parameters.copy(rotationParameters = newRotationParameters)
+    sample.copy(generatedBy = s"RotationUpdateProposal ($stddev)", parameters = newParameters)
+  }
+
+  override def logTransitionProbability(from: Sample, to: Sample) = {
+    val residual = DenseVector(
+      to.parameters.rotationParameters._1 - from.parameters.rotationParameters._1,
+      to.parameters.rotationParameters._2 - from.parameters.rotationParameters._2,
+      to.parameters.rotationParameters._3 - from.parameters.rotationParameters._3
+    )
+    perturbationDistr.logpdf(residual)
+  }
+}
+
+case class TranslationUpdateProposal(stddev: Double) extends
+  ProposalGenerator[Sample] with TransitionProbability[Sample] {
+
+  val perturbationDistr = new MultivariateNormalDistribution(DenseVector.zeros(3),
+    DenseMatrix.eye[Double](3) * stddev * stddev)
+
+  implicit val rng = scalismo.utils.Random(42)
+
+  def propose(sample: Sample): Sample = {
+    val newTranslationParameters = sample.parameters.translationParameters + EuclideanVector
+      .fromBreezeVector(perturbationDistr.sample())
+    val newParameters = sample.parameters.copy(translationParameters = newTranslationParameters)
+    sample.copy(generatedBy = s"TranlationUpdateProposal ($stddev)", parameters = newParameters)
+  }
+
+  override def logTransitionProbability(from: Sample, to: Sample) = {
+    val residual = to.parameters.translationParameters - from.parameters.translationParameters
+    perturbationDistr.logpdf(residual.toBreezeVector)
   }
 }

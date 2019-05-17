@@ -143,25 +143,25 @@ case class PriorEvaluator(model: StatisticalMeshModel) extends DistributionEvalu
   }
 }
 
-case class ActiveShapeModelEvaluator(model: StatisticalMeshModel, asm: ActiveShapeModel,
-                                     mesh: TriangleMesh[_3D],
-                                     preprocessedImage: PreprocessedImage) extends
-  DistributionEvaluator[Sample] {
-
-  override def logValue(sample: Sample): Double = {
-
-      val ids = asm.profiles.ids
-
-      val likelihoods = for (id <- ids) yield {
-        val profile = asm.profiles(id)
-        val profilePointOnMesh = mesh.pointSet.point(profile.pointId)
-        val featureAtPoint = asm.featureExtractor(preprocessedImage, profilePointOnMesh, mesh,
-          profile.pointId).get
-        profile.distribution.logpdf(featureAtPoint)
-      }
-      likelihoods.sum
-    }
-  }
+//case class ActiveShapeModelEvaluator(model: StatisticalMeshModel, asm: ActiveShapeModel,
+//                                     mesh: TriangleMesh[_3D],
+//                                     preprocessedImage: PreprocessedImage) extends
+//  DistributionEvaluator[Sample] {
+//
+//  override def logValue(sample: Sample): Double = {
+//
+//      val ids = asm.profiles.ids
+//
+//      val likelihoods = for (id <- ids) yield {
+//        val profile = asm.profiles(id)
+//        val profilePointOnMesh = mesh.pointSet.point(profile.pointId)
+//        val featureAtPoint = asm.featureExtractor(preprocessedImage, profilePointOnMesh, mesh,
+//          profile.pointId).get
+//        profile.distribution.logpdf(featureAtPoint)
+//      }
+//      likelihoods.sum
+//    }
+//  }
 
   case class SimpleCorrespondenceEvaluator(model: StatisticalMeshModel, correspondences: Seq[
     (PointId, Point3D, MultivariateNormalDistribution)]) extends DistributionEvaluator[Sample] {
