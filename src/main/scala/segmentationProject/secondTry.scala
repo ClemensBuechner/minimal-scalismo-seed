@@ -5,7 +5,7 @@ import java.io.File
 import breeze.linalg.{DenseMatrix, DenseVector}
 import scalismo.common.PointId
 import scalismo.geometry._
-import scalismo.io.{ActiveShapeModelIO, ImageIO, LandmarkIO, StatisticalModelIO}
+import scalismo.io._
 import scalismo.mesh.TriangleMesh
 import scalismo.registration.{RigidTransformation, RotationTransform, TranslationTransform}
 import scalismo.sampling.algorithms.MetropolisHastings
@@ -218,7 +218,7 @@ object secondTry {
         val newTranslationParameters = sample.parameters.translationParameters + EuclideanVector
           .fromBreezeVector(perturbationDistr.sample())
         val newParameters = sample.parameters.copy(translationParameters = newTranslationParameters)
-        sample.copy(generatedBy = s"TranlationUpdateProposal ($stddev)", parameters = newParameters)
+        sample.copy(generatedBy = s"TranslationUpdateProposal ($stddev)", parameters = newParameters)
       }
 
       override def logTransitionProbability(from: Sample, to: Sample) = {
@@ -303,7 +303,7 @@ object secondTry {
     val samples = samplingIterator.drop(1000).take(10000).toIndexedSeq
 
     println(logger.acceptanceRatios())
-    // Map(RotationUpdateProposal (0.01) -> 0.6971894832275612, TranlationUpdateProposal (1.0) ->
+    // Map(RotationUpdateProposal (0.01) -> 0.6971894832275612, TranslationUpdateProposal (1.0) ->
     // 0.5043859649122807, ShapeUpdateProposal (0.1) -> 0.7907262398280362)
 
     val bestSample = samples.maxBy(posteriorEvaluator.logValue)
@@ -311,6 +311,15 @@ object secondTry {
       .poseTransformation)
     val resultGroup = ui.createGroup("result")
     ui.show(resultGroup, bestFit, "best fit")
+
+    val groundTruth = MeshIO.readMesh(new File(dataDir+"test/4.stl")).get
+    ui.show(resultGroup, groundTruth, "ground truth")
+
+    val dist = scalismo.mesh.MeshMetrics.avgDistance(bestFit, groundTruth)
+    val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(bestFit, groundTruth)
+    println("Average Distance: " + dist)
+    println("Hausdorff Distance: " + hausDist)
+
 
     def computeMean(model: StatisticalMeshModel, id: PointId): Point[_3D] = {
       var mean = EuclideanVector(0, 0, 0)
