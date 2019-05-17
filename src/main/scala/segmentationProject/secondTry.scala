@@ -38,6 +38,10 @@ object secondTry {
     val modelGroup = ui.createGroup("modelGroup")
     val modelView = ui.show(modelGroup, asm.statisticalModel, "shapeModel")
 
+    val modelLms = LandmarkIO.readLandmarksJson[_3D](new java.io.File(dataDir+"TODO")).get
+    val modelLmViews = ui.show(modelGroup, modelLms, "modelLandmarks")
+    modelLmViews.foreach(lmView => lmView.color = java.awt.Color.BLUE)
+
     val profiles = asm.profiles
     profiles.foreach(profile => {
       val pointId = profile.pointId
@@ -61,13 +65,34 @@ object secondTry {
       val refView = ui.show(testGroup, reference, "reference")
       refView.color = Color.GREEN
 
+
+      val imgLms = LandmarkIO.readLandmarksJson[_3D](new java.io.File(dataDir+"TODO")).get
+      val imgLmViews = ui.show(testGroup, imgLms, "imgLandmarks")
+      imgLmViews.foreach(lmView => lmView.color = java.awt.Color.RED)
+
+      val modelLmIds =  modelLms.map(l => model.mean.pointSet.pointId(l.point).get)
+      val imgPoints = imgLms.map(l => l.point)
+
+      val landmarkNoiseVariance = 9.0
+      val uncertainty = MultivariateNormalDistribution(
+        DenseVector.zeros[Double](3),
+        DenseMatrix.eye[Double](3) * landmarkNoiseVariance
+      )
+
+      val correspondences = modelLmIds.zip(imgPoints).map(modelIdWithTargetPoint => {
+        val (modelId, targetPoint) =  modelIdWithTargetPoint
+        (modelId, targetPoint, uncertainty)
+      })
+
       val preprocessedImage = asm.preprocessor(image)
 
-      val likelihoodEvaluator = CachedEvaluator(ActiveShapeModelEvaluator(model, asm,
+      val likelihoodEvaluatorASM = CachedEvaluator(ActiveShapeModelEvaluator(model, asm,
         preprocessedImage))
+      val likelihoodEvaluatorLM = CachedEvaluator(CorrespondenceEvaluator(model, correspondences))
       val priorEvaluator = CachedEvaluator(PriorEvaluator(model))
 
-      val posteriorEvaluator = ProductEvaluator(priorEvaluator, likelihoodEvaluator)
+      val posteriorEvaluatorASM = ProductEvaluator(priorEvaluator, likelihoodEvaluatorASM)
+      val posteriorEvaluatorLM = ProductEvaluator(priorEvaluator, likelihoodEvaluatorLM)
 
       val shapeUpdateProposal = ShapeUpdateProposal(model.rank, 0.1)
       val rotationUpdateProposal = RotationUpdateProposal(0.01)
@@ -84,17 +109,18 @@ object secondTry {
 
       val initialSample = Sample("initial", initialParameters, computeCenterOfMass(model.mean))
 
-      val chain = MetropolisHastings(generator, posteriorEvaluator)
+      val chainLM = MetropolisHastings(generator, posteriorEvaluatorLM)
       val logger = new Logger()
-      val mhIterator = chain.iterator(initialSample, logger)
+      val mhIteratorLM = chainLM.iterator(initialSample, logger)
 
-      val samplingIterator = for ((sample, iteration) <- mhIterator.zipWithIndex) yield {
+      val samplingIterator = for ((sample, iteration) <- mhIteratorLM.zipWithIndex) yield {
         println("iteration " + iteration)
         if (iteration % 300 == 0) {
           modelView.shapeModelTransformationView.shapeTransformationView.coefficients = sample
             .parameters.modelCoefficients
           modelView.shapeModelTransformationView.poseTransformationView.transformation = sample
             .poseTransformation
+
           val dist = scalismo.mesh.MeshMetrics.avgDistance(model.instance(sample.parameters.modelCoefficients).transform(sample
             .poseTransformation), reference)
           val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(model.instance(sample.parameters.modelCoefficients).transform(sample
@@ -105,14 +131,36 @@ object secondTry {
         sample
       }
 
-      val samples = samplingIterator.drop(1000).take(2000).toIndexedSeq
+      val samplesLM = samplingIterator.drop(1000).take(2000).toIndexedSeq
 
+      val initialSampleASM = samplesLM.maxBy(posteriorEvaluatorASM.logValue)
+      val chainASM = MetropolisHastings(generator, posteriorEvaluatorASM)
+      val mhIteratorASM = chainASM.iterator(initialSampleASM, logger)
+
+      val samplingIteratorASM = for ((sample, iteration) <- mhIteratorASM.zipWithIndex) yield {
+        println("iteration " + iteration)
+        if (iteration % 300 == 0) {
+          modelView.shapeModelTransformationView.shapeTransformationView.coefficients = sample
+            .parameters.modelCoefficients
+          modelView.shapeModelTransformationView.poseTransformationView.transformation = sample
+            .poseTransformation
+
+          val dist = scalismo.mesh.MeshMetrics.avgDistance(model.instance(sample.parameters.modelCoefficients).transform(sample
+            .poseTransformation), reference)
+          val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(model.instance(sample.parameters.modelCoefficients).transform(sample
+            .poseTransformation), reference)
+          println("Average Distance: " + dist)
+          println("Hausdorff Distance: " + hausDist)
+        }
+        sample
+      }
+      val samplesASM = samplingIteratorASM.drop(1000).take(2000).toIndexedSeq
 
       println(logger.acceptanceRatios())
       // Map(RotationUpdateProposal (0.01) -> 0.6971894832275612, TranlationUpdateProposal (1.0) ->
       // 0.5043859649122807, ShapeUpdateProposal (0.1) -> 0.7907262398280362)
 
-      val bestSample = samples.maxBy(posteriorEvaluator.logValue)
+      val bestSample = samplesASM.maxBy(posteriorEvaluatorASM.logValue)
       val bestFit = model.instance(bestSample.parameters.modelCoefficients).transform(bestSample
         .poseTransformation)
       ui.show(testGroup, bestFit, "best fit")
