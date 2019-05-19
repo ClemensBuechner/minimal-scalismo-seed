@@ -38,7 +38,8 @@ object secondTry {
     val modelGroup = ui.createGroup("modelGroup")
     val modelView = ui.show(modelGroup, asm.statisticalModel, "shapeModel")
 
-    val modelLms = LandmarkIO.readLandmarksJson[_3D](new java.io.File(dataDir+"TODO")).get
+    val modelLms = LandmarkIO.readLandmarksJson[_3D](new java.io.File
+    ("data/landmarks/model_transformed.json")).get
     val modelLmViews = ui.show(modelGroup, modelLms, "modelLandmarks")
     modelLmViews.foreach(lmView => lmView.color = java.awt.Color.BLUE)
 
@@ -66,11 +67,12 @@ object secondTry {
       refView.color = Color.GREEN
 
 
-      val imgLms = LandmarkIO.readLandmarksJson[_3D](new java.io.File(dataDir+"TODO")).get
+      val imgLms = LandmarkIO.readLandmarksJson[_3D](new java.io.File("data/landmarks/" + i +
+        "_transformed.json")).get
       val imgLmViews = ui.show(testGroup, imgLms, "imgLandmarks")
       imgLmViews.foreach(lmView => lmView.color = java.awt.Color.RED)
 
-      val modelLmIds =  modelLms.map(l => model.mean.pointSet.pointId(l.point).get)
+      val modelLmIds = modelLms.map(l => model.mean.pointSet.pointId(l.point).get)
       val imgPoints = imgLms.map(l => l.point)
 
       val landmarkNoiseVariance = 9.0
@@ -80,7 +82,7 @@ object secondTry {
       )
 
       val correspondences = modelLmIds.zip(imgPoints).map(modelIdWithTargetPoint => {
-        val (modelId, targetPoint) =  modelIdWithTargetPoint
+        val (modelId, targetPoint) = modelIdWithTargetPoint
         (modelId, targetPoint, uncertainty)
       })
 
@@ -121,9 +123,11 @@ object secondTry {
           modelView.shapeModelTransformationView.poseTransformationView.transformation = sample
             .poseTransformation
 
-          val dist = scalismo.mesh.MeshMetrics.avgDistance(model.instance(sample.parameters.modelCoefficients).transform(sample
+          val dist = scalismo.mesh.MeshMetrics.avgDistance(model.instance(sample.parameters
+            .modelCoefficients).transform(sample
             .poseTransformation), reference)
-          val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(model.instance(sample.parameters.modelCoefficients).transform(sample
+          val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(model.instance(sample
+            .parameters.modelCoefficients).transform(sample
             .poseTransformation), reference)
           println("Average Distance: " + dist)
           println("Hausdorff Distance: " + hausDist)
@@ -145,9 +149,11 @@ object secondTry {
           modelView.shapeModelTransformationView.poseTransformationView.transformation = sample
             .poseTransformation
 
-          val dist = scalismo.mesh.MeshMetrics.avgDistance(model.instance(sample.parameters.modelCoefficients).transform(sample
+          val dist = scalismo.mesh.MeshMetrics.avgDistance(model.instance(sample.parameters
+            .modelCoefficients).transform(sample
             .poseTransformation), reference)
-          val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(model.instance(sample.parameters.modelCoefficients).transform(sample
+          val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(model.instance(sample
+            .parameters.modelCoefficients).transform(sample
             .poseTransformation), reference)
           println("Average Distance: " + dist)
           println("Hausdorff Distance: " + hausDist)

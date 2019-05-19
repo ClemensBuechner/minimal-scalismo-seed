@@ -53,13 +53,14 @@ object LandmarksGenerator {
     getLandmarksForModel(ui, asm.statisticalModel)
 
     val tests = Array(4, 14, 23, 25, 30)
-    val targets = Array(1, 9, 10, 13, 37)
+    val targets = Array(/*1, 9, 10, */13, 37)
 
     println("tests")
     tests.foreach { i: Int =>
       val image = ImageIO.read3DScalarImage[Short](new File(dataDir + "test/" + i + ".nii")).get
         .map(_.toFloat)
       val reference = MeshIO.readMesh(new File(dataDir + "test/" + i + ".stl")).get
+      println("Loaded test_" + i)
       getLandmarksForImage(ui, image, reference)
     }
 
@@ -67,7 +68,21 @@ object LandmarksGenerator {
     targets.foreach { i: Int =>
       val image = ImageIO.read3DScalarImage[Short](new File(dataDir + "targets/" + i + ".nii")).get
         .map(_.toFloat)
+      println("Loaded target_" + i)
       getLandmarksForImage(ui, image, null)
     }
   }
 }
+
+//Ausrichtung: Head nach oben links
+//A: Intercondyloid Fossa  von unten (unten mitte grube)
+//B: Medial condyle von unten (unten links)
+//C: Lateral condyle von unten (unten rechts)
+//D: Hintere grube von hinten
+//E: Medial condyle von vorne
+//F: Lateral condyle von vorne
+//G: Lesser Trochanter von vorne
+//H: Fovea capitis von links oben
+//I: Obturator iternus von oben
+//J: Greater Trochanter von rechts
+
