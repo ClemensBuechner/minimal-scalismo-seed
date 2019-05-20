@@ -75,7 +75,10 @@ object secondTry {
       val modelLmIds = modelLms.map(l => model.mean.pointSet.pointId(l.point).get)
       val imgPoints = imgLms.map(l => l.point)
 
+      //landmark noise for tests
       val landmarkNoiseVariance = 9.0
+      //landmark noise for targets
+      //val landmarkNoiseVariance = 15.0
       val uncertainty = MultivariateNormalDistribution(
         DenseVector.zeros[Double](3),
         DenseMatrix.eye[Double](3) * landmarkNoiseVariance
