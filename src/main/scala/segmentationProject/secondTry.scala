@@ -8,7 +8,10 @@ import scalismo.common.PointId
 import scalismo.geometry._
 import scalismo.io._
 import scalismo.mesh.TriangleMesh
-import scalismo.registration.{RigidTransformation, RotationTransform, TranslationTransform}
+import scalismo.registration.{
+  LandmarkRegistration, RigidTransformation, RotationTransform,
+  TranslationTransform
+}
 import scalismo.sampling.algorithms.MetropolisHastings
 import scalismo.sampling.evaluators.ProductEvaluator
 import scalismo.sampling.loggers.AcceptRejectLogger
@@ -16,17 +19,18 @@ import scalismo.sampling.proposals.MixtureProposal
 import scalismo.sampling.{DistributionEvaluator, ProposalGenerator, TransitionProbability}
 import scalismo.statisticalmodel.asm.{ActiveShapeModel, PreprocessedImage}
 import scalismo.statisticalmodel.{MultivariateNormalDistribution, StatisticalMeshModel}
-import scalismo.ui.api.ScalismoUI
-import scalismo.utils.Memoize
+import scalismo.ui.api.{ScalismoUI, StatisticalMeshModelViewControls}
+import scalismo.utils.{Memoize, Random}
 
+import scala.collection.immutable
 import scala.io.StdIn
 
 
 object secondTry {
 
-  def main(args: Array[String]): Unit = {
+  implicit val rng: Random = scalismo.utils.Random(42)
 
-    implicit val rng = scalismo.utils.Random(42)
+  def main(args: Array[String]): Unit = {
 
     scalismo.initialize()
     val ui = ScalismoUI()
@@ -66,107 +70,87 @@ object secondTry {
       val refView = ui.show(testGroup, reference, "reference")
       refView.color = Color.GREEN
 
-
       val imgLms = LandmarkIO.readLandmarksJson[_3D](new java.io.File("data/landmarks/" + i +
         "_transformed.json")).get
       val imgLmViews = ui.show(testGroup, imgLms, "imgLandmarks")
       imgLmViews.foreach(lmView => lmView.color = java.awt.Color.RED)
 
       val modelLmIds = modelLms.map(l => model.mean.pointSet.pointId(l.point).get)
+      val modelLmPoints = modelLmIds.map(id => model.mean.pointSet.point(id))
       val imgPoints = imgLms.map(l => l.point)
-
-      val landmarkNoiseVariance = 9.0
-      val uncertainty = MultivariateNormalDistribution(
-        DenseVector.zeros[Double](3),
-        DenseMatrix.eye[Double](3) * landmarkNoiseVariance
-      )
-
-      val correspondences = modelLmIds.zip(imgPoints).map(modelIdWithTargetPoint => {
-        val (modelId, targetPoint) = modelIdWithTargetPoint
-        (modelId, targetPoint, uncertainty)
-      })
 
       val preprocessedImage = asm.preprocessor(image)
 
-      val likelihoodEvaluatorASM = CachedEvaluator(ActiveShapeModelEvaluator(model, asm,
-        preprocessedImage))
-      val likelihoodEvaluatorLM = CachedEvaluator(CorrespondenceEvaluator(model, correspondences))
       val priorEvaluator = CachedEvaluator(PriorEvaluator(model))
 
-      val posteriorEvaluatorASM = ProductEvaluator(priorEvaluator, likelihoodEvaluatorASM)
+      val likelihoodEvaluatorLM = getLandmarkLikelihoodEvaluator(model, modelLmIds, imgPoints)
       val posteriorEvaluatorLM = ProductEvaluator(priorEvaluator, likelihoodEvaluatorLM)
 
-      val shapeUpdateProposal = ShapeUpdateProposal(model.rank, 0.1)
+      val likelihoodEvaluatorASM = CachedEvaluator(ActiveShapeModelEvaluator(model, asm,
+        preprocessedImage))
+      val posteriorEvaluatorASM = ProductEvaluator(priorEvaluator, likelihoodEvaluatorASM)
+
+      val shapeUpdateSmallProposal = ShapeUpdateProposal(model.rank, 0.1)
+      val shapeUpdateLargeProposal = ShapeUpdateProposal(model.rank, 1)
       val rotationUpdateProposal = RotationUpdateProposal(0.01)
       val translationUpdateProposal = TranslationUpdateProposal(1.0)
-      //      val shapeUpdateProposal = ShapeUpdateProposal(model.rank, 0.9)
-      //      val rotationUpdateProposal = RotationUpdateProposal(0.01)
-      //      val translationUpdateProposal = TranslationUpdateProposal(2.0)
-      val generator = MixtureProposal.fromProposalsWithTransition(
-        (0.6, shapeUpdateProposal), (0.2, rotationUpdateProposal), (0.2, translationUpdateProposal)
-      )
 
       val initialParameters = Parameters(EuclideanVector(0, 0, 0), (0.0, 0.0, 0.0),
         DenseVector.zeros[Double](model.rank))
 
-      val initialSample = Sample("initial", initialParameters, computeCenterOfMass(model.mean))
-
-      val chainLM = MetropolisHastings(generator, posteriorEvaluatorLM)
       val logger = new Logger()
-      val mhIteratorLM = chainLM.iterator(initialSample, logger)
 
-      val samplingIterator = for ((sample, iteration) <- mhIteratorLM.zipWithIndex) yield {
-        println("iteration " + iteration)
-        if (iteration % 300 == 0) {
-          modelView.shapeModelTransformationView.shapeTransformationView.coefficients = sample
-            .parameters.modelCoefficients
-          modelView.shapeModelTransformationView.poseTransformationView.transformation = sample
-            .poseTransformation
+      //      val landmarks = modelLmPoints.zip(imgPoints)
+      //      val bestTransform: RigidTransformation[_3D] = LandmarkRegistration
+      //        .rigid3DLandmarkRegistration(landmarks, center = Point(0, 0, 0))
+      //      val alignedModel = model.transform(bestTransform)
+      //
+      //      val alignedGroup = ui.createGroup("aligned")
+      //      val alignedView = ui.show(alignedGroup, alignedModel, "aligned")
+      //      alignedView.meshView.color = Color.BLUE
+      //
+      //      val initialSampleASM = Sample("initial", initialParameters, computeCenterOfMass
+      //      (alignedModel.mean))
 
-          val dist = scalismo.mesh.MeshMetrics.avgDistance(model.instance(sample.parameters
-            .modelCoefficients).transform(sample
-            .poseTransformation), reference)
-          val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(model.instance(sample
-            .parameters.modelCoefficients).transform(sample
-            .poseTransformation), reference)
-          println("Average Distance: " + dist)
-          println("Hausdorff Distance: " + hausDist)
-        }
-        sample
-      }
+      val initialSample: Sample = Sample("initial", initialParameters, computeCenterOfMass(model
+        .mean))
+      val generatorLM = MixtureProposal.fromProposalsWithTransition(
+        (0.2, shapeUpdateLargeProposal), (0.2, shapeUpdateSmallProposal),
+        (0.3, rotationUpdateProposal), (0.3, translationUpdateProposal)
+      )
+      val samplesLM = chain("Landmarks", model, initialSample, 5000, generatorLM,
+        posteriorEvaluatorLM, logger, modelView, reference)
 
-      val samplesLM = samplingIterator.drop(1000).take(2000).toIndexedSeq
+      val initialSampleASM = samplesLM.maxBy(posteriorEvaluatorLM.logValue)
+      val lmView = ui.show(testGroup, model.instance(initialSampleASM.parameters
+        .modelCoefficients).transform(initialSampleASM.poseTransformation),
+        "after Landmark alignment")
+      lmView.color = Color.YELLOW
+      val generatorASM = MixtureProposal.fromProposalsWithTransition(
+        (0.4, shapeUpdateLargeProposal), (0.2, shapeUpdateSmallProposal),
+        (0.2, rotationUpdateProposal), (0.2, translationUpdateProposal)
+      )
+      val samplesASM = chain("Active Shape Model Large", model, initialSampleASM, 5000,
+        generatorASM, posteriorEvaluatorASM, logger, modelView, reference)
 
-      val initialSampleASM = samplesLM.maxBy(posteriorEvaluatorASM.logValue)
-      val chainASM = MetropolisHastings(generator, posteriorEvaluatorASM)
-      val mhIteratorASM = chainASM.iterator(initialSampleASM, logger)
+      val initialSampleASM2 = samplesASM.maxBy(posteriorEvaluatorASM.logValue)
+      val asmView = ui.show(testGroup, model.instance(initialSampleASM2.parameters
+        .modelCoefficients).transform(initialSampleASM2.poseTransformation),
+        "after first ASM")
+      asmView.color = Color.RED
+      val generatorASM2 = MixtureProposal.fromProposalsWithTransition(
+        (0.1, shapeUpdateLargeProposal), (0.5, shapeUpdateSmallProposal),
+        (0.2, rotationUpdateProposal), (0.2, translationUpdateProposal)
+      )
+      val samplesASM2 = chain("Active Shape Model Small", model, initialSampleASM2, 5000,
+        generatorASM2, posteriorEvaluatorASM, logger, modelView, reference)
 
-      val samplingIteratorASM = for ((sample, iteration) <- mhIteratorASM.zipWithIndex) yield {
-        println("iteration " + iteration)
-        if (iteration % 300 == 0) {
-          modelView.shapeModelTransformationView.shapeTransformationView.coefficients = sample
-            .parameters.modelCoefficients
-          modelView.shapeModelTransformationView.poseTransformationView.transformation = sample
-            .poseTransformation
-
-          val dist = scalismo.mesh.MeshMetrics.avgDistance(model.instance(sample.parameters
-            .modelCoefficients).transform(sample
-            .poseTransformation), reference)
-          val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(model.instance(sample
-            .parameters.modelCoefficients).transform(sample
-            .poseTransformation), reference)
-          println("Average Distance: " + dist)
-          println("Hausdorff Distance: " + hausDist)
-        }
-        sample
-      }
-      val samplesASM = samplingIteratorASM.drop(1000).take(2000).toIndexedSeq
+      // Why does overall result get worse if I increase numbers of iterations?
+      // 15000 -> 5000 -> 8000 ----> avg=0.62, hdrf=6.2
 
       println(logger.acceptanceRatios())
-      // Map(RotationUpdateProposal (0.01) -> 0.6971894832275612, TranlationUpdateProposal (1.0) ->
-      // 0.5043859649122807, ShapeUpdateProposal (0.1) -> 0.7907262398280362)
 
-      val bestSample = samplesASM.maxBy(posteriorEvaluatorASM.logValue)
+      val bestSample = samplesASM2.maxBy(posteriorEvaluatorASM.logValue)
       val bestFit = model.instance(bestSample.parameters.modelCoefficients).transform(bestSample
         .poseTransformation)
       ui.show(testGroup, bestFit, "best fit")
@@ -176,8 +160,9 @@ object secondTry {
       println("Average Distance: " + dist)
       println("Hausdorff Distance: " + hausDist)
 
+      MeshIO.writeMesh(bestFit, new File("data/mcmc/bestFit_" + i + ".stl"))
+
       StdIn.readLine("Show next fit?")
-      //      ui.setVisibility(imgView,)
     }
 
     //    val (marginalizedModel, newCorrespondences) = marginalizeModelForCorrespondences(model,
@@ -191,30 +176,6 @@ object secondTry {
     //      (0, 0)
     //      }, ${cov(1, 1)}, ${cov(2, 2)}")
     //    }
-    // expected position for point at id PointId(0)  = Point3D(148.10137201095068,
-    // -7.151235826279037,291.3929897650882)
-    // posterior variance computed  for point at id (shape and pose) PointId(0)  =
-    // 4.254464918957609, 3.939366851939424, 3.32790002246177
-    // expected position for point at id PointId(1)  = Point3D(142.24949688108646,
-    // -4.4064122402505745,266.34241057439533)
-    // posterior variance computed  for point at id (shape and pose) PointId(1)  =
-    // 2.918968756161676, 2.159129807301085, 2.915190937982501
-    // expected position for point at id PointId(2)  = Point3D(141.3051915247215,
-    // -4.2897512164448095,226.94538458273826)
-    // posterior variance computed  for point at id (shape and pose) PointId(2)  =
-    // 2.203212589533782, 1.9443312683620244, 3.558990457373749
-    // expected position for point at id PointId(3)  = Point3D(143.33662067133574,
-    // -4.885817375124605,201.61254954128444)
-    // posterior variance computed  for point at id (shape and pose) PointId(3)  =
-    // 4.211176241740335, 3.5805967352101438, 3.8214742761066214
-    // expected position for point at id PointId(4)  = Point3D(102.9147937651206,
-    // 32.77448813851955,248.52670379739345)
-    // posterior variance computed  for point at id (shape and pose) PointId(4)  =
-    // 3.670091389108584, 4.998066354925429, 3.3640625099189827
-    // expected position for point at id PointId(5)  = Point3D(137.63389362946234,
-    // 101.3277589516202,248.64874726494665)
-    // posterior variance computed  for point at id (shape and pose) PointId(5)  =
-    // 8.479207875196545, 6.924214739937887, 5.29092402298062
 
     //    val posteriorFixedPose = model.posterior(correspondences.toIndexedSeq)
     //
@@ -224,18 +185,6 @@ object secondTry {
     //      with id " +
     //        s"$id = ${cov(0, 0)}, ${cov(1, 1)}, ${cov(2, 2)}")
     //    }
-    // posterior variance computed by analytic posterior (shape only) for point with id PointId
-    // (0) = 1.7493438462816924, 2.3773798978463545, 2.4529203603071132
-    // posterior variance computed by analytic posterior (shape only) for point with id PointId
-    // (1) = 1.7425234299448356, 2.347569081897583, 2.484181513654568
-    // posterior variance computed by analytic posterior (shape only) for point with id PointId
-    // (2) = 1.728312680395977, 2.311983615096077, 2.4760881301654973
-    // posterior variance computed by analytic posterior (shape only) for point with id PointId
-    // (3) = 1.7362509228394625, 2.3504558671936087, 2.4497130086130414
-    // posterior variance computed by analytic posterior (shape only) for point with id PointId
-    // (4) = 1.74656771644886, 2.315887303162952, 2.494671632799402
-    // posterior variance computed by analytic posterior (shape only) for point with id PointId
-    // (5) = 1.7511296018408746, 2.2802845887546255, 2.505733093422708
   }
 
   def computeCenterOfMass(mesh: TriangleMesh[_3D]): Point[_3D] = {
@@ -243,6 +192,93 @@ object secondTry {
     mesh.pointSet.points.foldLeft(Point(0, 0, 0))((sum, point) => sum + point.toVector *
       normFactor)
   }
+
+  def getSamplingIterator(name: String, iterator: Iterator[Sample], model: StatisticalMeshModel,
+                          view: StatisticalMeshModelViewControls): Iterator[Sample] = {
+
+    for ((sample, iteration) <- iterator.zipWithIndex) yield {
+      println(name + ": iteration " + iteration)
+      if (iteration % 500 == 0) {
+        view.shapeModelTransformationView.shapeTransformationView.coefficients = sample
+          .parameters.modelCoefficients
+        view.shapeModelTransformationView.poseTransformationView.transformation = sample
+          .poseTransformation
+
+        //        val dist = scalismo.mesh.MeshMetrics.avgDistance(model.instance(sample.parameters
+        //          .modelCoefficients).transform(sample
+        //          .poseTransformation), reference)
+        //        val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(model.instance(sample
+        //          .parameters.modelCoefficients).transform(sample
+        //          .poseTransformation), reference)
+        //        println("Average Distance: " + dist)
+        //        println("Hausdorff Distance: " + hausDist)
+      }
+      sample
+    }
+  }
+
+  def getLandmarkLikelihoodEvaluator(model: StatisticalMeshModel, modelLMs: Seq[PointId],
+                                     imgPoints: Seq[Point[_3D]]): CachedEvaluator[Sample] = {
+
+    val landmarkNoiseVariance = 9.0
+    val uncertainty = MultivariateNormalDistribution(DenseVector.zeros[Double](3),
+      DenseMatrix.eye[Double](3) * landmarkNoiseVariance)
+
+    val correspondences = modelLMs.zip(imgPoints).map(modelIdWithTargetPoint => {
+      val (modelId, targetPoint) = modelIdWithTargetPoint
+      (modelId, targetPoint, uncertainty)
+    })
+
+    CachedEvaluator(CorrespondenceEvaluator(model, correspondences))
+  }
+
+  def chain(name: String, model: StatisticalMeshModel, initial: Sample, iterations: Int,
+            generator: MixtureProposal[Sample] with TransitionProbability[Sample],
+            posteriorEvaluator: ProductEvaluator[Sample], logger: Logger,
+            view: StatisticalMeshModelViewControls): IndexedSeq[Sample] = {
+
+    chain(name, model, initial, iterations, generator, posteriorEvaluator, logger, view, null)
+  }
+
+  def chain(name: String, model: StatisticalMeshModel, initial: Sample, iterations: Int,
+            generator: MixtureProposal[Sample] with TransitionProbability[Sample],
+            posteriorEvaluator: ProductEvaluator[Sample], logger: Logger,
+            view: StatisticalMeshModelViewControls, reference: TriangleMesh[_3D])
+  : IndexedSeq[Sample] = {
+
+    val chain: MetropolisHastings[Sample] = MetropolisHastings(generator, posteriorEvaluator)
+    val mhIterator = chain.iterator(initial, logger)
+
+    val samplingIterator = for ((sample, iteration) <- mhIterator.zipWithIndex) yield {
+      println(name + ": iteration " + iteration)
+      if (iteration % 500 == 0) {
+        view.shapeModelTransformationView.shapeTransformationView.coefficients = sample
+          .parameters.modelCoefficients
+        view.shapeModelTransformationView.poseTransformationView.transformation = sample
+          .poseTransformation
+
+        if (reference != null) {
+          val dist = scalismo.mesh.MeshMetrics.avgDistance(model.instance(sample.parameters
+
+            .modelCoefficients).transform(sample
+            .poseTransformation), reference)
+          val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(model.instance(sample
+            .parameters.modelCoefficients).transform(sample
+            .poseTransformation), reference)
+          println("Average Distance: " + dist)
+          println("Hausdorff Distance: " + hausDist)
+        }
+      }
+      sample
+    }
+
+    samplingIterator.take(iterations).toIndexedSeq
+  }
+
+  def performChaines() = {
+
+  }
+
 
   //  def computeMean(model: StatisticalMeshModel, id: PointId, samples: Seq[Sample]): Point[_3D]
   //  = {
@@ -318,8 +354,12 @@ case class ActiveShapeModelEvaluator(model: StatisticalMeshModel, asm: ActiveSha
     val likelihoods = for (id <- ids) yield {
       val profile = asm.profiles(id)
       val profilePointOnMesh = mesh.pointSet.point(profile.pointId)
-      val featureAtPoint = asm.featureExtractor(preprocessedImage, profilePointOnMesh, mesh,
-        profile.pointId).get
+      val featureAtPoint: DenseVector[Double] = {
+        val featureAtPoint = asm.featureExtractor(preprocessedImage, profilePointOnMesh, mesh,
+          profile.pointId)
+        if (featureAtPoint.isDefined) featureAtPoint.get
+        else DenseVector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+      }
       profile.distribution.logpdf(featureAtPoint)
     }
     likelihoods.sum
@@ -360,7 +400,6 @@ case class CorrespondenceEvaluator(model: StatisticalMeshModel, correspondences:
 
       uncertainty.logpdf(observedDeformation.toBreezeVector)
     })
-
 
     val loglikelihood = likelihoods.sum
     loglikelihood
@@ -483,3 +522,74 @@ class Logger extends AcceptRejectLogger[Sample] {
     acceptanceRatios.toMap
   }
 }
+
+/*
+Active Shape Model Large: iteration 947
+Active Shape Model Large: iteration 948
+Exception in thread "main" java.util.NoSuchElementException: None.get
+at scala.None$.get(Option.scala:349)
+at scala.None$.get(Option.scala:347)
+at segmentationProject.ActiveShapeModelEvaluator.$anonfun$logValue$1(secondTry.scala:334)
+at segmentationProject.ActiveShapeModelEvaluator.$anonfun$logValue$1$adapted(secondTry.scala:330)
+at scala.collection.TraversableLike.$anonfun$map$1(TraversableLike.scala:234)
+at scala.collection.Iterator.foreach(Iterator.scala:944)
+at scala.collection.Iterator.foreach$(Iterator.scala:944)
+at scala.collection.AbstractIterator.foreach(Iterator.scala:1432)
+at scala.collection.IterableLike.foreach(IterableLike.scala:71)
+at scala.collection.IterableLike.foreach$(IterableLike.scala:70)
+at scala.collection.AbstractIterable.foreach(Iterable.scala:54)
+at scala.collection.TraversableLike.map(TraversableLike.scala:234)
+at scala.collection.TraversableLike.map$(TraversableLike.scala:227)
+at scala.collection.AbstractTraversable.map(Traversable.scala:104)
+at segmentationProject.ActiveShapeModelEvaluator.logValue(secondTry.scala:330)
+at segmentationProject.ActiveShapeModelEvaluator.logValue(secondTry.scala:320)
+at segmentationProject.CachedEvaluator.$anonfun$memoizedLogValue$1(secondTry.scala:383)
+at segmentationProject.CachedEvaluator.$anonfun$memoizedLogValue$1$adapted(secondTry.scala:383)
+at scalismo.utils.Memoize.$anonfun$apply$1(Memoize.scala:59)
+at scalismo.utils.Memoize$Holder.getOrPut(Memoize.scala:32)
+at scalismo.utils.Memoize.apply(Memoize.scala:59)
+at segmentationProject.CachedEvaluator.logValue(secondTry.scala:386)
+at scalismo.sampling.evaluators.ProductEvaluator.$anonfun$logValue$1(ProductEvaluator.scala:29)
+at scalismo.sampling.evaluators.ProductEvaluator.$anonfun$logValue$1$adapted(ProductEvaluator
+.scala:29)
+at scala.collection.Iterator$$anon$10.next(Iterator.scala:457)
+at scala.collection.Iterator.foreach(Iterator.scala:944)
+at scala.collection.Iterator.foreach$(Iterator.scala:944)
+at scala.collection.AbstractIterator.foreach(Iterator.scala:1432)
+at scala.collection.TraversableOnce.foldLeft(TraversableOnce.scala:157)
+at scala.collection.TraversableOnce.foldLeft$(TraversableOnce.scala:155)
+at scala.collection.AbstractIterator.foldLeft(Iterator.scala:1432)
+at scala.collection.TraversableOnce.sum(TraversableOnce.scala:216)
+at scala.collection.TraversableOnce.sum$(TraversableOnce.scala:216)
+at scala.collection.AbstractIterator.sum(Iterator.scala:1432)
+at scalismo.sampling.evaluators.ProductEvaluator.logValue(ProductEvaluator.scala:29)
+at scalismo.sampling.algorithms.MetropolisHastings.next(Metropolis.scala:80)
+at scalismo.sampling.algorithms.MetropolisHastings.$anonfun$iterator$2(Metropolis.scala:72)
+at scala.collection.Iterator$$anon$7.next(Iterator.scala:137)
+at scala.collection.Iterator$$anon$20.next(Iterator.scala:889)
+at scala.collection.Iterator$$anon$20.next(Iterator.scala:885)
+at scala.collection.Iterator$$anon$12.hasNext(Iterator.scala:510)
+at scala.collection.Iterator$$anon$10.hasNext(Iterator.scala:456)
+at scala.collection.Iterator$SliceIterator.hasNext(Iterator.scala:263)
+at scala.collection.Iterator.foreach(Iterator.scala:944)
+at scala.collection.Iterator.foreach$(Iterator.scala:944)
+at scala.collection.AbstractIterator.foreach(Iterator.scala:1432)
+at scala.collection.generic.Growable.$plus$plus$eq(Growable.scala:59)
+at scala.collection.generic.Growable.$plus$plus$eq$(Growable.scala:50)
+at scala.collection.immutable.VectorBuilder.$plus$plus$eq(Vector.scala:658)
+at scala.collection.immutable.VectorBuilder.$plus$plus$eq(Vector.scala:635)
+at scala.collection.TraversableOnce.to(TraversableOnce.scala:310)
+at scala.collection.TraversableOnce.to$(TraversableOnce.scala:308)
+at scala.collection.AbstractIterator.to(Iterator.scala:1432)
+at scala.collection.TraversableOnce.toIndexedSeq(TraversableOnce.scala:300)
+at scala.collection.TraversableOnce.toIndexedSeq$(TraversableOnce.scala:300)
+at scala.collection.AbstractIterator.toIndexedSeq(Iterator.scala:1432)
+at segmentationProject.secondTry$.chain(secondTry.scala:251)
+at segmentationProject.secondTry$.$anonfun$main$3(secondTry.scala:114)
+at segmentationProject.secondTry$.$anonfun$main$3$adapted(secondTry.scala:57)
+at scala.collection.IndexedSeqOptimized.foreach(IndexedSeqOptimized.scala:32)
+at scala.collection.IndexedSeqOptimized.foreach$(IndexedSeqOptimized.scala:29)
+at scala.collection.mutable.ArrayOps$ofInt.foreach(ArrayOps.scala:242)
+at segmentationProject.secondTry$.main(secondTry.scala:57)
+at segmentationProject.secondTry.main(secondTry.scala)
+*/
