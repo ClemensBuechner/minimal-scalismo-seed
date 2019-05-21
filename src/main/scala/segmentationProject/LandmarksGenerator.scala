@@ -53,7 +53,7 @@ object LandmarksGenerator {
     getLandmarksForModel(ui, asm.statisticalModel)
 
     val tests = Array(4, 14, 23, 25, 30)
-    val targets = Array(/*1, 9, 10, */13, 37)
+    val targets = Array(1, 9, 10, 13, 37)
 
     println("tests")
     tests.foreach { i: Int =>

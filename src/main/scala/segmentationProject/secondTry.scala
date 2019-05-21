@@ -119,8 +119,8 @@ object secondTry {
       val mhIteratorLM = chainLM.iterator(initialSample, logger)
 
       val samplingIterator = for ((sample, iteration) <- mhIteratorLM.zipWithIndex) yield {
-        println("iteration " + iteration)
-        if (iteration % 300 == 0) {
+        if (iteration % 1000 == 0) {
+          println("iteration " + iteration)
           modelView.shapeModelTransformationView.shapeTransformationView.coefficients = sample
             .parameters.modelCoefficients
           modelView.shapeModelTransformationView.poseTransformationView.transformation = sample
@@ -138,15 +138,15 @@ object secondTry {
         sample
       }
 
-      val samplesLM = samplingIterator.drop(1000).take(2000).toIndexedSeq
+      val samplesLM = samplingIterator.take(3000).toIndexedSeq
 
-      val initialSampleASM = samplesLM.maxBy(posteriorEvaluatorASM.logValue)
+      val initialSampleASM = samplesLM.maxBy(posteriorEvaluatorLM.logValue)
       val chainASM = MetropolisHastings(generator, posteriorEvaluatorASM)
       val mhIteratorASM = chainASM.iterator(initialSampleASM, logger)
 
       val samplingIteratorASM = for ((sample, iteration) <- mhIteratorASM.zipWithIndex) yield {
-        println("iteration " + iteration)
-        if (iteration % 300 == 0) {
+        if (iteration % 1000 == 0) {
+          println("iteration " + iteration)
           modelView.shapeModelTransformationView.shapeTransformationView.coefficients = sample
             .parameters.modelCoefficients
           modelView.shapeModelTransformationView.poseTransformationView.transformation = sample
@@ -163,7 +163,7 @@ object secondTry {
         }
         sample
       }
-      val samplesASM = samplingIteratorASM.drop(1000).take(2000).toIndexedSeq
+      val samplesASM = samplingIteratorASM.take(3000).toIndexedSeq
 
       println(logger.acceptanceRatios())
       // Map(RotationUpdateProposal (0.01) -> 0.6971894832275612, TranlationUpdateProposal (1.0) ->
