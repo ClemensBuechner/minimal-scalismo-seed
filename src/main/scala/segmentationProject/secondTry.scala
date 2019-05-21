@@ -89,7 +89,7 @@ object secondTry {
 
       val likelihoodEvaluatorASM = CachedEvaluator(ActiveShapeModelEvaluator(model, asm,
         preprocessedImage))
-      val posteriorEvaluatorASM = ProductEvaluator(priorEvaluator, likelihoodEvaluatorASM)
+      val posteriorEvaluatorASM = ProductEvaluator(priorEvaluator, likelihoodEvaluatorLM, likelihoodEvaluatorASM)
 
       val shapeUpdateSmallProposal = ShapeUpdateProposal(model.rank, 0.001)
       val shapeUpdateMediumProposal = ShapeUpdateProposal(model.rank, 0.01)
