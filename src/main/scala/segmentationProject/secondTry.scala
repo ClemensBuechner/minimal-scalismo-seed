@@ -91,8 +91,9 @@ object secondTry {
         preprocessedImage))
       val posteriorEvaluatorASM = ProductEvaluator(priorEvaluator, likelihoodEvaluatorASM)
 
-      val shapeUpdateSmallProposal = ShapeUpdateProposal(model.rank, 0.1)
-      val shapeUpdateLargeProposal = ShapeUpdateProposal(model.rank, 1)
+      val shapeUpdateSmallProposal = ShapeUpdateProposal(model.rank, 0.001)
+      val shapeUpdateMediumProposal = ShapeUpdateProposal(model.rank, 0.01)
+      val shapeUpdateLargeProposal = ShapeUpdateProposal(model.rank, 0.1)
       val rotationUpdateProposal = RotationUpdateProposal(0.01)
       val translationUpdateProposal = TranslationUpdateProposal(1.0)
 
@@ -116,10 +117,10 @@ object secondTry {
       val initialSample: Sample = Sample("initial", initialParameters, computeCenterOfMass(model
         .mean))
       val generatorLM = MixtureProposal.fromProposalsWithTransition(
-        (0.2, shapeUpdateLargeProposal), (0.2, shapeUpdateSmallProposal),
+        (0.2, shapeUpdateLargeProposal), (0.2, shapeUpdateMediumProposal),
         (0.3, rotationUpdateProposal), (0.3, translationUpdateProposal)
       )
-      val samplesLM = chain("Landmarks", model, initialSample, 5000, generatorLM,
+      val samplesLM = chain("Landmarks", model, initialSample, 10000, generatorLM,
         posteriorEvaluatorLM, logger, modelView, reference)
 
       val initialSampleASM = samplesLM.maxBy(posteriorEvaluatorLM.logValue)
@@ -128,7 +129,7 @@ object secondTry {
         "after Landmark alignment")
       lmView.color = Color.YELLOW
       val generatorASM = MixtureProposal.fromProposalsWithTransition(
-        (0.4, shapeUpdateLargeProposal), (0.2, shapeUpdateSmallProposal),
+        (0.4, shapeUpdateLargeProposal), (0.2, shapeUpdateMediumProposal),
         (0.2, rotationUpdateProposal), (0.2, translationUpdateProposal)
       )
       val samplesASM = chain("Active Shape Model Large", model, initialSampleASM, 5000,
@@ -140,8 +141,8 @@ object secondTry {
         "after first ASM")
       asmView.color = Color.RED
       val generatorASM2 = MixtureProposal.fromProposalsWithTransition(
-        (0.1, shapeUpdateLargeProposal), (0.5, shapeUpdateSmallProposal),
-        (0.2, rotationUpdateProposal), (0.2, translationUpdateProposal)
+        (0.3, shapeUpdateMediumProposal), (0.5, shapeUpdateSmallProposal),
+        (0.1, rotationUpdateProposal), (0.1, translationUpdateProposal)
       )
       val samplesASM2 = chain("Active Shape Model Small", model, initialSampleASM2, 5000,
         generatorASM2, posteriorEvaluatorASM, logger, modelView, reference)
