@@ -54,7 +54,7 @@ object secondTry {
     })
     println("Loaded model.")
 
-    val tests = Array(4, 14, 23, 25, 30)
+    val tests = Array(/*4,*/ 14, 23, 25, 30)
     val targets = Array(1, 9, 10, 13, 37)
 
     tests.foreach { i: Int =>
@@ -89,11 +89,11 @@ object secondTry {
 
       val likelihoodEvaluatorASM = CachedEvaluator(ActiveShapeModelEvaluator(model, asm,
         preprocessedImage))
-      val posteriorEvaluatorASM = ProductEvaluator(priorEvaluator, likelihoodEvaluatorLM, likelihoodEvaluatorASM)
+      val posteriorEvaluatorASM = ProductEvaluator(priorEvaluator, likelihoodEvaluatorASM, likelihoodEvaluatorLM)
 
-      val shapeUpdateSmallProposal = ShapeUpdateProposal(model.rank, 0.001)
-      val shapeUpdateMediumProposal = ShapeUpdateProposal(model.rank, 0.01)
-      val shapeUpdateLargeProposal = ShapeUpdateProposal(model.rank, 0.1)
+      val shapeUpdateSmallProposal = ShapeUpdateProposal(model.rank, 0.01)
+      val shapeUpdateMediumProposal = ShapeUpdateProposal(model.rank, 0.1)
+      val shapeUpdateLargeProposal = ShapeUpdateProposal(model.rank, 1)
       val rotationUpdateProposal = RotationUpdateProposal(0.01)
       val translationUpdateProposal = TranslationUpdateProposal(1.0)
 
@@ -141,8 +141,8 @@ object secondTry {
         "after first ASM")
       asmView.color = Color.RED
       val generatorASM2 = MixtureProposal.fromProposalsWithTransition(
-        (0.3, shapeUpdateMediumProposal), (0.5, shapeUpdateSmallProposal),
-        (0.1, rotationUpdateProposal), (0.1, translationUpdateProposal)
+        (0.1, shapeUpdateLargeProposal), (0.5, shapeUpdateMediumProposal),
+        (0.2, rotationUpdateProposal), (0.2, translationUpdateProposal)
       )
       val samplesASM2 = chain("Active Shape Model Small", model, initialSampleASM2, 5000,
         generatorASM2, posteriorEvaluatorASM, logger, modelView, reference)
