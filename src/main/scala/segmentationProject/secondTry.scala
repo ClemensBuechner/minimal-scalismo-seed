@@ -8,10 +8,7 @@ import scalismo.common.PointId
 import scalismo.geometry._
 import scalismo.io._
 import scalismo.mesh.TriangleMesh
-import scalismo.registration.{
-  LandmarkRegistration, RigidTransformation, RotationTransform,
-  TranslationTransform
-}
+import scalismo.registration.{RigidTransformation, RotationTransform, TranslationTransform}
 import scalismo.sampling.algorithms.MetropolisHastings
 import scalismo.sampling.evaluators.ProductEvaluator
 import scalismo.sampling.loggers.AcceptRejectLogger
@@ -22,13 +19,12 @@ import scalismo.statisticalmodel.{MultivariateNormalDistribution, StatisticalMes
 import scalismo.ui.api.{ScalismoUI, StatisticalMeshModelViewControls}
 import scalismo.utils.{Memoize, Random}
 
-import scala.collection.immutable
 import scala.io.StdIn
 
 
 object secondTry {
 
-  implicit val rng: Random = scalismo.utils.Random(42)
+  implicit val rng: Random = Random(42)
 
   def main(args: Array[String]): Unit = {
 
@@ -91,11 +87,41 @@ object secondTry {
         preprocessedImage))
       val posteriorEvaluatorASM = ProductEvaluator(priorEvaluator, likelihoodEvaluatorASM, likelihoodEvaluatorLM)
 
+
       val shapeUpdateSmallProposal = ShapeUpdateProposal(model.rank, 0.01)
       val shapeUpdateMediumProposal = ShapeUpdateProposal(model.rank, 0.1)
       val shapeUpdateLargeProposal = ShapeUpdateProposal(model.rank, 1)
       val rotationUpdateProposal = RotationUpdateProposal(0.01)
       val translationUpdateProposal = TranslationUpdateProposal(1.0)
+
+//      Using large=0.1, medium=0.01, small=0.001
+//      3 chains, first landmarks, then twice ASM
+//      5000 iterations each
+//
+//      test 4
+//      Map(ShapeUpdateProposal (0.1) -> 0.1964465303385853, TranlationUpdateProposal (1.0) -> 0.20953660174613833, ShapeUpdateProposal (0.001) -> 0.009976057462090982, RotationUpdateProposal (0.01) -> 0.1327974276527331, ShapeUpdateProposal (0.01) -> 0.29502923976608186)
+//      Average Distance: 0.7193388188196546
+//      Hausdorff Distance: 6.058696500512402
+//
+//      test 14
+//      Map(ShapeUpdateProposal (0.1) -> 0.19497260715436673, TranlationUpdateProposal (1.0) -> 0.22887208155212102, ShapeUpdateProposal (0.001) -> 0.017262143717382578, RotationUpdateProposal (0.01) -> 0.11076497057805469, ShapeUpdateProposal (0.01) -> 0.2781456953642384)
+//      Average Distance: 0.6663277677851256
+//      Hausdorff Distance: 4.475893011358805
+//
+//      test 23
+//      Map(ShapeUpdateProposal (0.1) -> 0.1932383162081538, TranlationUpdateProposal (1.0) -> 0.21181938911022577, ShapeUpdateProposal (0.001) -> 0.011177644710578843, RotationUpdateProposal (0.01) -> 0.141785957736878, ShapeUpdateProposal (0.01) -> 0.3148200623406064)
+//      Average Distance: 0.693717601538942
+//      Hausdorff Distance: 3.234064625525209
+//
+//      test 25
+//      Map(ShapeUpdateProposal (0.1) -> 0.19501515661839003, TranlationUpdateProposal (1.0) -> 0.21506442021803765, ShapeUpdateProposal (0.001) -> 0.019398258115597783, RotationUpdateProposal (0.01) -> 0.15933694181326116, ShapeUpdateProposal (0.01) -> 0.30463199772662686)
+//      Average Distance: 0.6926581108340492
+//      Hausdorff Distance: 3.3740502761280595
+//
+//      test 30
+//      Map(ShapeUpdateProposal (0.1) -> 0.1827846364883402, TranlationUpdateProposal (1.0) -> 0.2221112221112221, ShapeUpdateProposal (0.001) -> 0.006664053312426499, RotationUpdateProposal (0.01) -> 0.14262402088772846, ShapeUpdateProposal (0.01) -> 0.3081143517181634)
+//      Average Distance: 0.7942234379392421
+//      Hausdorff Distance: 5.662372193505642
 
       val initialParameters = Parameters(EuclideanVector(0, 0, 0), (0.0, 0.0, 0.0),
         DenseVector.zeros[Double](model.rank))
@@ -120,7 +146,7 @@ object secondTry {
         (0.2, shapeUpdateLargeProposal), (0.2, shapeUpdateMediumProposal),
         (0.3, rotationUpdateProposal), (0.3, translationUpdateProposal)
       )
-      val samplesLM = chain("Landmarks", model, initialSample, 10000, generatorLM,
+      val samplesLM = chain("Landmarks", model, initialSample, 5000, generatorLM,
         posteriorEvaluatorLM, logger, modelView, reference)
 
       val initialSampleASM = samplesLM.maxBy(posteriorEvaluatorLM.logValue)
@@ -146,9 +172,6 @@ object secondTry {
       )
       val samplesASM2 = chain("Active Shape Model Small", model, initialSampleASM2, 5000,
         generatorASM2, posteriorEvaluatorASM, logger, modelView, reference)
-
-      // Why does overall result get worse if I increase numbers of iterations?
-      // 15000 -> 5000 -> 8000 ----> avg=0.62, hdrf=6.2
 
       println(logger.acceptanceRatios())
 
@@ -195,30 +218,6 @@ object secondTry {
       normFactor)
   }
 
-  def getSamplingIterator(name: String, iterator: Iterator[Sample], model: StatisticalMeshModel,
-                          view: StatisticalMeshModelViewControls): Iterator[Sample] = {
-
-    for ((sample, iteration) <- iterator.zipWithIndex) yield {
-      println(name + ": iteration " + iteration)
-      if (iteration % 500 == 0) {
-        view.shapeModelTransformationView.shapeTransformationView.coefficients = sample
-          .parameters.modelCoefficients
-        view.shapeModelTransformationView.poseTransformationView.transformation = sample
-          .poseTransformation
-
-        //        val dist = scalismo.mesh.MeshMetrics.avgDistance(model.instance(sample.parameters
-        //          .modelCoefficients).transform(sample
-        //          .poseTransformation), reference)
-        //        val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(model.instance(sample
-        //          .parameters.modelCoefficients).transform(sample
-        //          .poseTransformation), reference)
-        //        println("Average Distance: " + dist)
-        //        println("Hausdorff Distance: " + hausDist)
-      }
-      sample
-    }
-  }
-
   def getLandmarkLikelihoodEvaluator(model: StatisticalMeshModel, modelLMs: Seq[PointId],
                                      imgPoints: Seq[Point[_3D]]): CachedEvaluator[Sample] = {
 
@@ -255,7 +254,7 @@ object secondTry {
     val mhIterator = chain.iterator(initial, logger)
 
     val samplingIterator = for ((sample, iteration) <- mhIterator.zipWithIndex) yield {
-      println(name + ": iteration " + iteration)
+      if (iteration % 100 == 0) println(name + ": iteration " + iteration)
       if (iteration % 500 == 0) {
         view.shapeModelTransformationView.shapeTransformationView.coefficients = sample
           .parameters.modelCoefficients
@@ -423,21 +422,21 @@ case class CachedEvaluator[A](evaluator: DistributionEvaluator[A]) extends
 case class ShapeUpdateProposal(paramVectorSize: Int, stddev: Double) extends
   ProposalGenerator[Sample] with TransitionProbability[Sample] {
 
-  val perturbationDistr = new MultivariateNormalDistribution(
-    DenseVector.zeros(paramVectorSize),
-    DenseMatrix.eye[Double](paramVectorSize) * stddev * stddev
-  )
+  val perturbationDistr = new MultivariateNormalDistribution(DenseVector.zeros(paramVectorSize),
+    DenseMatrix.eye[Double](paramVectorSize) * stddev * stddev)
 
-  implicit val rng = scalismo.utils.Random(42)
+  implicit val rng = Random(42)
 
   override def propose(sample: Sample): Sample = {
+
     val perturbation = perturbationDistr.sample()
     val newParameters = sample.parameters.copy(modelCoefficients = sample.parameters
       .modelCoefficients + perturbationDistr.sample)
     sample.copy(generatedBy = s"ShapeUpdateProposal ($stddev)", parameters = newParameters)
   }
 
-  override def logTransitionProbability(from: Sample, to: Sample) = {
+  override def logTransitionProbability(from: Sample, to: Sample): Double = {
+
     val residual = to.parameters.modelCoefficients - from.parameters.modelCoefficients
     perturbationDistr.logpdf(residual)
   }
@@ -450,7 +449,7 @@ case class RotationUpdateProposal(stddev: Double) extends
     DenseVector.zeros[Double](3),
     DenseMatrix.eye[Double](3) * stddev * stddev)
 
-  implicit val rng = scalismo.utils.Random(42)
+  implicit val rng = Random(42)
 
   def propose(sample: Sample): Sample = {
     val perturbation = perturbationDistr.sample
@@ -463,7 +462,7 @@ case class RotationUpdateProposal(stddev: Double) extends
     sample.copy(generatedBy = s"RotationUpdateProposal ($stddev)", parameters = newParameters)
   }
 
-  override def logTransitionProbability(from: Sample, to: Sample) = {
+  override def logTransitionProbability(from: Sample, to: Sample): Double = {
     val residual = DenseVector(
       to.parameters.rotationParameters._1 - from.parameters.rotationParameters._1,
       to.parameters.rotationParameters._2 - from.parameters.rotationParameters._2,
@@ -479,7 +478,7 @@ case class TranslationUpdateProposal(stddev: Double) extends
   val perturbationDistr = new MultivariateNormalDistribution(DenseVector.zeros(3),
     DenseMatrix.eye[Double](3) * stddev * stddev)
 
-  implicit val rng = scalismo.utils.Random(42)
+  implicit val rng = Random(42)
 
   def propose(sample: Sample): Sample = {
     val newTranslationParameters = sample.parameters.translationParameters + EuclideanVector
@@ -488,7 +487,7 @@ case class TranslationUpdateProposal(stddev: Double) extends
     sample.copy(generatedBy = s"TranlationUpdateProposal ($stddev)", parameters = newParameters)
   }
 
-  override def logTransitionProbability(from: Sample, to: Sample) = {
+  override def logTransitionProbability(from: Sample, to: Sample): Double = {
     val residual = to.parameters.translationParameters - from.parameters.translationParameters
     perturbationDistr.logpdf(residual.toBreezeVector)
   }
@@ -498,24 +497,19 @@ class Logger extends AcceptRejectLogger[Sample] {
   private val numAccepted = collection.mutable.Map[String, Int]()
   private val numRejected = collection.mutable.Map[String, Int]()
 
-  override def accept(current: Sample,
-                      sample: Sample,
-                      generator: ProposalGenerator[Sample],
-                      evaluator: DistributionEvaluator[Sample]
-                     ): Unit = {
+  override def accept(current: Sample, sample: Sample, generator: ProposalGenerator[Sample],
+                      evaluator: DistributionEvaluator[Sample]): Unit = {
+
     val numAcceptedSoFar = numAccepted.getOrElseUpdate(sample.generatedBy, 0)
     numAccepted.update(sample.generatedBy, numAcceptedSoFar + 1)
   }
 
-  override def reject(current: Sample,
-                      sample: Sample,
-                      generator: ProposalGenerator[Sample],
-                      evaluator: DistributionEvaluator[Sample]
-                     ): Unit = {
+  override def reject(current: Sample, sample: Sample, generator: ProposalGenerator[Sample],
+                      evaluator: DistributionEvaluator[Sample]): Unit = {
+
     val numRejectedSoFar = numRejected.getOrElseUpdate(sample.generatedBy, 0)
     numRejected.update(sample.generatedBy, numRejectedSoFar + 1)
   }
-
 
   def acceptanceRatios(): Map[String, Double] = {
     val generatorNames = numRejected.keys.toSet.union(numAccepted.keys.toSet)
