@@ -37,6 +37,7 @@ object secondTry {
       "femur-asm.h5")).get
     val modelGroup = ui.createGroup("modelGroup")
     val modelView = ui.show(modelGroup, asm.statisticalModel, "shapeModel")
+    modelView.meshView.color = Color.YELLOW
 
     val modelLms = LandmarkIO.readLandmarksJson[_3D](new java.io.File
     ("data/landmarks/model_transformed.json")).get
@@ -53,18 +54,61 @@ object secondTry {
     val tests = Array(4, 14, 23, 25, 30)
     val targets = Array(1, 9, 10, 13, 37)
 
-    tests.foreach { i: Int =>
+//    tests.foreach { i: Int =>
+//
+//      val model = asm.statisticalModel
+//
+//      val image = ImageIO.read3DScalarImage[Short](new File(dataDir + "test/" + i + ".nii")).get
+//        .map(_.toFloat)
+//      val reference = MeshIO.readMesh(new File(dataDir + "test/" + i + ".stl")).get
+//
+//      val testGroup = ui.createGroup("test_" + i)
+//      val imgView = ui.show(testGroup, image, "image")
+//      val refView = ui.show(testGroup, reference, "reference")
+//      refView.color = Color.GREEN
+//
+//      val imgLms = LandmarkIO.readLandmarksJson[_3D](new java.io.File("data/landmarks/" + i +
+//        "_transformed.json")).get
+//      val imgLmViews = ui.show(testGroup, imgLms, "imgLandmarks")
+//      imgLmViews.foreach(lmView => lmView.color = java.awt.Color.RED)
+//
+//      val modelLmIds = modelLms.map(l => model.mean.pointSet.pointId(l.point).get)
+//      val imgPoints = imgLms.map(l => l.point)
+//
+//      val preprocessedImage = asm.preprocessor(image)
+//
+//      val initialParameters = Parameters(EuclideanVector(0, 0, 0), (0.0, 0.0, 0.0),
+//        DenseVector.zeros[Double](model.rank))
+//
+//      val logger = new Logger()
+//
+//      val initialSample: Sample = Sample("initial", initialParameters, computeCenterOfMass(model
+//        .mean))
+//      val bestSample = runChains(model, preprocessedImage, modelLmIds, imgPoints, initialSample,
+//        logger, modelView, reference, asm, 1)
+//      val bestFit = model.instance(bestSample.parameters.modelCoefficients)
+//        .transform(bestSample.poseTransformation)
+//      ui.show(testGroup, bestFit, "best fit")
+//
+//      println(logger.acceptanceRatios())
+//      val dist = scalismo.mesh.MeshMetrics.avgDistance(bestFit, reference)
+//      val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(bestFit, reference)
+//      println("Average Distance: " + dist)
+//      println("Hausdorff Distance: " + hausDist)
+//
+//      MeshIO.writeMesh(bestFit, new File("data/mcmc/bestFit_" + i + ".stl"))
+//
+//      StdIn.readLine("Show next fit?")
+//    }
 
+    targets.foreach { i: Int =>
       val model = asm.statisticalModel
 
-      val image = ImageIO.read3DScalarImage[Short](new File(dataDir + "test/" + i + ".nii")).get
+      val image = ImageIO.read3DScalarImage[Short](new File(dataDir + "targets/" + i + ".nii")).get
         .map(_.toFloat)
-      val reference = MeshIO.readMesh(new File(dataDir + "test/" + i + ".stl")).get
 
-      val testGroup = ui.createGroup("test_" + i)
+      val testGroup = ui.createGroup("target_" + i)
       val imgView = ui.show(testGroup, image, "image")
-      val refView = ui.show(testGroup, reference, "reference")
-      refView.color = Color.GREEN
 
       val imgLms = LandmarkIO.readLandmarksJson[_3D](new java.io.File("data/landmarks/" + i +
         "_transformed.json")).get
@@ -72,122 +116,29 @@ object secondTry {
       imgLmViews.foreach(lmView => lmView.color = java.awt.Color.RED)
 
       val modelLmIds = modelLms.map(l => model.mean.pointSet.pointId(l.point).get)
-      val modelLmPoints = modelLmIds.map(id => model.mean.pointSet.point(id))
       val imgPoints = imgLms.map(l => l.point)
 
-
       val preprocessedImage = asm.preprocessor(image)
-
-      val priorEvaluator = CachedEvaluator(PriorEvaluator(model))
-
-      val likelihoodEvaluatorLM = getLandmarkLikelihoodEvaluator(model, modelLmIds, imgPoints)
-      val posteriorEvaluatorLM = ProductEvaluator(priorEvaluator, likelihoodEvaluatorLM)
-
-      val likelihoodEvaluatorASM = CachedEvaluator(ActiveShapeModelEvaluator(model, asm,
-        preprocessedImage))
-      val posteriorEvaluatorASM = ProductEvaluator(priorEvaluator, likelihoodEvaluatorLM,
-        likelihoodEvaluatorASM)
-
-      val shapeUpdateSmallProposal = ShapeUpdateProposal(model.rank, 0.01)
-      val shapeUpdateMediumProposal = ShapeUpdateProposal(model.rank, 0.1)
-      val shapeUpdateLargeProposal = ShapeUpdateProposal(model.rank, 1)
-      val rotationUpdateProposal = RotationUpdateProposal(0.01)
-      val translationUpdateProposal = TranslationUpdateProposal(1.0)
-
-//      Using large=0.1, medium=0.01, small=0.001
-//      3 chains, first landmarks, then twice ASM
-//      5000 iterations each
-//
-//      test 4
-//      Map(ShapeUpdateProposal (0.1) -> 0.1964465303385853, TranlationUpdateProposal (1.0) -> 0.20953660174613833, ShapeUpdateProposal (0.001) -> 0.009976057462090982, RotationUpdateProposal (0.01) -> 0.1327974276527331, ShapeUpdateProposal (0.01) -> 0.29502923976608186)
-//      Average Distance: 0.7193388188196546
-//      Hausdorff Distance: 6.058696500512402
-//
-//      test 14
-//      Map(ShapeUpdateProposal (0.1) -> 0.19497260715436673, TranlationUpdateProposal (1.0) -> 0.22887208155212102, ShapeUpdateProposal (0.001) -> 0.017262143717382578, RotationUpdateProposal (0.01) -> 0.11076497057805469, ShapeUpdateProposal (0.01) -> 0.2781456953642384)
-//      Average Distance: 0.6663277677851256
-//      Hausdorff Distance: 4.475893011358805
-//
-//      test 23
-//      Map(ShapeUpdateProposal (0.1) -> 0.1932383162081538, TranlationUpdateProposal (1.0) -> 0.21181938911022577, ShapeUpdateProposal (0.001) -> 0.011177644710578843, RotationUpdateProposal (0.01) -> 0.141785957736878, ShapeUpdateProposal (0.01) -> 0.3148200623406064)
-//      Average Distance: 0.693717601538942
-//      Hausdorff Distance: 3.234064625525209
-//
-//      test 25
-//      Map(ShapeUpdateProposal (0.1) -> 0.19501515661839003, TranlationUpdateProposal (1.0) -> 0.21506442021803765, ShapeUpdateProposal (0.001) -> 0.019398258115597783, RotationUpdateProposal (0.01) -> 0.15933694181326116, ShapeUpdateProposal (0.01) -> 0.30463199772662686)
-//      Average Distance: 0.6926581108340492
-//      Hausdorff Distance: 3.3740502761280595
-//
-//      test 30
-//      Map(ShapeUpdateProposal (0.1) -> 0.1827846364883402, TranlationUpdateProposal (1.0) -> 0.2221112221112221, ShapeUpdateProposal (0.001) -> 0.006664053312426499, RotationUpdateProposal (0.01) -> 0.14262402088772846, ShapeUpdateProposal (0.01) -> 0.3081143517181634)
-//      Average Distance: 0.7942234379392421
-//      Hausdorff Distance: 5.662372193505642
 
       val initialParameters = Parameters(EuclideanVector(0, 0, 0), (0.0, 0.0, 0.0),
         DenseVector.zeros[Double](model.rank))
 
       val logger = new Logger()
 
-      //      val landmarks = modelLmPoints.zip(imgPoints)
-      //      val bestTransform: RigidTransformation[_3D] = LandmarkRegistration
-      //        .rigid3DLandmarkRegistration(landmarks, center = Point(0, 0, 0))
-      //      val alignedModel = model.transform(bestTransform)
-      //
-      //      val alignedGroup = ui.createGroup("aligned")
-      //      val alignedView = ui.show(alignedGroup, alignedModel, "aligned")
-      //      alignedView.meshView.color = Color.BLUE
-      //
-      //      val initialSampleASM = Sample("initial", initialParameters, computeCenterOfMass
-      //      (alignedModel.mean))
-
       val initialSample: Sample = Sample("initial", initialParameters, computeCenterOfMass(model
         .mean))
-      val generatorLM = MixtureProposal.fromProposalsWithTransition(
-        (0.2, shapeUpdateLargeProposal), (0.2, shapeUpdateMediumProposal),
-        (0.3, rotationUpdateProposal), (0.3, translationUpdateProposal)
-      )
-      val samplesLM = chain("Landmarks", model, initialSample, 5000, generatorLM,
-        posteriorEvaluatorLM, logger, modelView, reference)
-
-      val initialSampleASM = samplesLM.maxBy(posteriorEvaluatorLM.logValue)
-      val lmView = ui.show(testGroup, model.instance(initialSampleASM.parameters
-        .modelCoefficients).transform(initialSampleASM.poseTransformation),
-        "after Landmark alignment")
-      lmView.color = Color.YELLOW
-      val generatorASM = MixtureProposal.fromProposalsWithTransition(
-        (0.4, shapeUpdateLargeProposal), (0.2, shapeUpdateMediumProposal),
-        (0.2, rotationUpdateProposal), (0.2, translationUpdateProposal)
-      )
-      val samplesASM = chain("Active Shape Model Large", model, initialSampleASM, 5000,
-        generatorASM, posteriorEvaluatorASM, logger, modelView, reference)
-
-      val initialSampleASM2 = samplesASM.maxBy(posteriorEvaluatorASM.logValue)
-      val asmView = ui.show(testGroup, model.instance(initialSampleASM2.parameters
-        .modelCoefficients).transform(initialSampleASM2.poseTransformation),
-        "after first ASM")
-      asmView.color = Color.RED
-      val generatorASM2 = MixtureProposal.fromProposalsWithTransition(
-        (0.3, shapeUpdateMediumProposal), (0.5, shapeUpdateSmallProposal),
-        (0.1, rotationUpdateProposal), (0.1, translationUpdateProposal)
-      )
-      val samplesASM2 = chain("Active Shape Model Small", model, initialSampleASM2, 5000,
-        generatorASM2, posteriorEvaluatorASM, logger, modelView, reference)
+      val bestSample = runChains(model, preprocessedImage, modelLmIds, imgPoints, initialSample,
+        logger, modelView, null, asm, 1)
+      val bestFit = model.instance(bestSample.parameters.modelCoefficients)
+        .transform(bestSample.poseTransformation)
+      ui.show(testGroup, bestFit, "best fit")
 
       println(logger.acceptanceRatios())
 
-      val bestSample = samplesASM2.maxBy(posteriorEvaluatorASM.logValue)
-      val bestFit = model.instance(bestSample.parameters.modelCoefficients).transform(bestSample
-        .poseTransformation)
-      ui.show(testGroup, bestFit, "best fit")
-
-      val dist = scalismo.mesh.MeshMetrics.avgDistance(bestFit, reference)
-      val hausDist = scalismo.mesh.MeshMetrics.hausdorffDistance(bestFit, reference)
-      println("Average Distance: " + dist)
-      println("Hausdorff Distance: " + hausDist)
-
       MeshIO.writeMesh(bestFit, new File("data/mcmc/bestFit_" + i + ".stl"))
 
-      StdIn.readLine("Show next fit?")
+//      StdIn.readLine("Show next fit?")
+
     }
 
     //    val (marginalizedModel, newCorrespondences) = marginalizeModelForCorrespondences(model,
@@ -212,7 +163,80 @@ object secondTry {
     //    }
   }
 
+  def runChains(model: StatisticalMeshModel, preprocessedImage: PreprocessedImage,
+                modelLmIds: Seq[PointId], imgPoints: Seq[Point[_3D]], initial: Sample,
+                logger: Logger, viewControls: StatisticalMeshModelViewControls,
+                reference: TriangleMesh[_3D], asm: ActiveShapeModel, repetitions: Int): Sample = {
+
+    val priorEvaluator = CachedEvaluator(PriorEvaluator(model))
+
+    val likelihoodEvaluatorLM = getLandmarkLikelihoodEvaluator(model, modelLmIds, imgPoints)
+    val posteriorEvaluatorLM = ProductEvaluator(priorEvaluator, likelihoodEvaluatorLM)
+
+    val likelihoodEvaluatorASM = CachedEvaluator(ActiveShapeModelEvaluator(model, asm,
+      preprocessedImage))
+
+    val posteriorEvaluatorASM = ProductEvaluator(priorEvaluator, likelihoodEvaluatorASM)
+
+    val shapeUpdateTinyProposal = ShapeUpdateProposal(model.rank, 0.02)
+    val shapeUpdateSmallProposal = ShapeUpdateProposal(model.rank, 0.05)
+    val shapeUpdateMediumProposal = ShapeUpdateProposal(model.rank, 0.1)
+    val shapeUpdateLargeProposal = ShapeUpdateProposal(model.rank, 0.3)
+    val rotationUpdateProposal = RotationUpdateProposal(0.01)
+    val translationUpdateProposal = TranslationUpdateProposal(1.0)
+
+    def runLMChain(initial: Sample): Sample = {
+
+      val generator = MixtureProposal.fromProposalsWithTransition(
+        (0.1, shapeUpdateLargeProposal), (0.2, shapeUpdateMediumProposal),
+        (0.1, shapeUpdateSmallProposal), (0.3, rotationUpdateProposal),
+        (0.3, translationUpdateProposal)
+      )
+      val samples = chain("Landmarks", model, initial, 5000, generator,
+        posteriorEvaluatorLM, logger, viewControls, reference)
+
+      samples.maxBy(posteriorEvaluatorASM.logValue)
+    }
+
+    def runASMChainLarge(initial: Sample): Sample = {
+
+      val generator = MixtureProposal.fromProposalsWithTransition(
+        (0.1, shapeUpdateLargeProposal), (0.4, shapeUpdateMediumProposal),
+        (0.3, shapeUpdateSmallProposal), (0.1, rotationUpdateProposal),
+        (0.1, translationUpdateProposal)
+      )
+      val samples = chain("Active Shape Model Large", model, initial, 5000, generator,
+        posteriorEvaluatorASM, logger, viewControls, reference)
+
+      samples.maxBy(posteriorEvaluatorASM.logValue)
+    }
+
+    def runASMChainSmall(initial: Sample): Sample = {
+
+      val generator = MixtureProposal.fromProposalsWithTransition(
+        (0.2, shapeUpdateMediumProposal), (0.5, shapeUpdateSmallProposal),
+        (0.2, shapeUpdateTinyProposal), (0.05, rotationUpdateProposal),
+        (0.05, translationUpdateProposal)
+      )
+      val samples = chain("Active Shape Model Small", model, initial, 5000, generator,
+        posteriorEvaluatorASM, logger, viewControls, reference)
+
+      samples.maxBy(posteriorEvaluatorASM.logValue)
+    }
+
+    var sample = initial
+    for (_ <- 1 to repetitions) {
+      sample = runLMChain(sample)
+      println(logger.acceptanceRatios())
+      sample = runASMChainLarge(sample)
+      println(logger.acceptanceRatios())
+      sample = runASMChainSmall(sample)
+    }
+    sample
+  }
+
   def computeCenterOfMass(mesh: TriangleMesh[_3D]): Point[_3D] = {
+
     val normFactor = 1.0 / mesh.pointSet.numberOfPoints
     mesh.pointSet.points.foldLeft(Point(0, 0, 0))((sum, point) => sum + point.toVector *
       normFactor)
@@ -238,19 +262,19 @@ object secondTry {
 
   def chain(name: String, model: StatisticalMeshModel, initial: Sample, iterations: Int,
             generator: MixtureProposal[Sample] with TransitionProbability[Sample],
-            posteriorEvaluator: ProductEvaluator[Sample], logger: Logger,
+            evaluator: ProductEvaluator[Sample], logger: Logger,
             view: StatisticalMeshModelViewControls): IndexedSeq[Sample] = {
 
-    chain(name, model, initial, iterations, generator, posteriorEvaluator, logger, view, null)
+    chain(name, model, initial, iterations, generator, evaluator, logger, view, null)
   }
 
   def chain(name: String, model: StatisticalMeshModel, initial: Sample, iterations: Int,
             generator: MixtureProposal[Sample] with TransitionProbability[Sample],
-            posteriorEvaluator: ProductEvaluator[Sample], logger: Logger,
+            evaluator: ProductEvaluator[Sample], logger: Logger,
             view: StatisticalMeshModelViewControls, reference: TriangleMesh[_3D])
   : IndexedSeq[Sample] = {
 
-    val chain: MetropolisHastings[Sample] = MetropolisHastings(generator, posteriorEvaluator)
+    val chain: MetropolisHastings[Sample] = MetropolisHastings(generator, evaluator)
     val mhIterator = chain.iterator(initial, logger)
 
     val samplingIterator = for ((sample, iteration) <- mhIterator.zipWithIndex) yield {
@@ -278,11 +302,6 @@ object secondTry {
 
     samplingIterator.take(iterations).toIndexedSeq
   }
-
-  def performChaines() = {
-
-  }
-
 
   //  def computeMean(model: StatisticalMeshModel, id: PointId, samples: Seq[Sample]): Point[_3D]
   //  = {
@@ -362,7 +381,7 @@ case class ActiveShapeModelEvaluator(model: StatisticalMeshModel, asm: ActiveSha
         val featureAtPoint = asm.featureExtractor(preprocessedImage, profilePointOnMesh, mesh,
           profile.pointId)
         if (featureAtPoint.isDefined) featureAtPoint.get
-        else DenseVector(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+        else DenseVector.zeros(11) // (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
       }
       profile.distribution.logpdf(featureAtPoint)
     }
@@ -484,7 +503,7 @@ case class TranslationUpdateProposal(stddev: Double) extends
     val newTranslationParameters = sample.parameters.translationParameters + EuclideanVector
       .fromBreezeVector(perturbationDistr.sample())
     val newParameters = sample.parameters.copy(translationParameters = newTranslationParameters)
-    sample.copy(generatedBy = s"TranlationUpdateProposal ($stddev)", parameters = newParameters)
+    sample.copy(generatedBy = s"TranslationUpdateProposal ($stddev)", parameters = newParameters)
   }
 
   override def logTransitionProbability(from: Sample, to: Sample): Double = {
