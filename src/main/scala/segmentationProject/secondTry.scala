@@ -50,7 +50,7 @@ object secondTry {
     })
     println("Loaded model.")
 
-    val tests = Array(/*4,*/ 14, 23, 25, 30)
+    val tests = Array(/*4, 14, 23, 25,*/ 30)
     val targets = Array(1, 9, 10, 13, 37)
 
     tests.foreach { i: Int =>
@@ -123,6 +123,38 @@ object secondTry {
 //      Average Distance: 0.7942234379392421
 //      Hausdorff Distance: 5.662372193505642
 
+//      Using large=0.1, medium=0.01, small=0.001
+//      3 chains, first landmarks, then twice ASM
+//      0.3, shapeUpdateLargeProposal, 0.1, shapeUpdateMediumProposal, 0.3, rotationUpdateProposal, 0.3, translationUpdateProposal
+//      0.4, shapeUpdateLargeProposal, 0.2, shapeUpdateMediumProposal, 0.2, rotationUpdateProposal, 0.2, translationUpdateProposal)
+//      0.2, shapeUpdateLargeProposal, 0.4, shapeUpdateMediumProposal, 0.2, rotationUpdateProposal, 0.2, translationUpdateProposal)
+//      5000 iterations each
+
+//      test 4
+//      Map(RotationUpdateProposal (0.01) -> 0.11923963133640553, ShapeUpdateProposal (1.0) -> 6.678539626001781E-4, TranlationUpdateProposal (1.0) -> 0.1926241134751773, ShapeUpdateProposal (0.1) -> 0.0846636259977195)
+//      Average Distance: 0.545066910487653
+//      Hausdorff Distance: 4.981978388874389
+
+//      test 14
+//      Map(RotationUpdateProposal (0.01) -> 0.11051289317086993, ShapeUpdateProposal (1.0) -> 0.0018190086402910413, TranlationUpdateProposal (1.0) -> 0.17775261817152563, ShapeUpdateProposal (0.1) -> 0.09923664122137404)
+//      Average Distance: 0.460311320415816
+//      Hausdorff Distance: 3.1937226435571135
+
+//      test 23
+//      Map(RotationUpdateProposal (0.01) -> 0.1274537695590327, ShapeUpdateProposal (1.0) -> 0.0, TranlationUpdateProposal (1.0) -> 0.18371961560203504, ShapeUpdateProposal (0.1) -> 0.09417169107091587)
+//      Average Distance: 0.5741785192090351
+//      Hausdorff Distance: 3.951893870903141
+
+//      test 25
+//      Map(RotationUpdateProposal (0.01) -> 0.1326644370122631, ShapeUpdateProposal (1.0) -> 0.0, TranlationUpdateProposal (1.0) -> 0.18696397941680962, ShapeUpdateProposal (0.1) -> 0.09036144578313253)
+//      Average Distance: 1.100314973070345
+//      Hausdorff Distance: 13.050853133532089
+
+//      test 30
+//      Map(RotationUpdateProposal (0.01) -> 0.12718064153066966, ShapeUpdateProposal (1.0) -> 4.636068613815484E-4, TranlationUpdateProposal (1.0) -> 0.1784037558685446, ShapeUpdateProposal (0.1) -> 0.10148232611174458)
+//      Average Distance: 0.8219450420339894
+//      Hausdorff Distance: 6.479588848006874
+
       val initialParameters = Parameters(EuclideanVector(0, 0, 0), (0.0, 0.0, 0.0),
         DenseVector.zeros[Double](model.rank))
 
@@ -143,7 +175,7 @@ object secondTry {
       val initialSample: Sample = Sample("initial", initialParameters, computeCenterOfMass(model
         .mean))
       val generatorLM = MixtureProposal.fromProposalsWithTransition(
-        (0.2, shapeUpdateLargeProposal), (0.2, shapeUpdateMediumProposal),
+        (0.3, shapeUpdateLargeProposal), (0.1, shapeUpdateMediumProposal),
         (0.3, rotationUpdateProposal), (0.3, translationUpdateProposal)
       )
       val samplesLM = chain("Landmarks", model, initialSample, 5000, generatorLM,
@@ -167,7 +199,7 @@ object secondTry {
         "after first ASM")
       asmView.color = Color.RED
       val generatorASM2 = MixtureProposal.fromProposalsWithTransition(
-        (0.1, shapeUpdateLargeProposal), (0.5, shapeUpdateMediumProposal),
+        (0.2, shapeUpdateLargeProposal), (0.4, shapeUpdateMediumProposal),
         (0.2, rotationUpdateProposal), (0.2, translationUpdateProposal)
       )
       val samplesASM2 = chain("Active Shape Model Small", model, initialSampleASM2, 5000,
