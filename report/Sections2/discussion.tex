@@ -1,4 +1,23 @@
 \section{Discussion}
 \label{sec:discussion}
 
-\todoMissing{Write discussion}
+\todoRevise{Revise discussion}
+
+We can base the evaluation of our performance on the two important types of results we presented in the previous section: The average distance from the test fit to the ground truth data and the images of the test or target fit to the CT image. 
+
+\subsection{Likelihood Evaluators}
+The idea behind using multiple Markov chains in sequence was firstly that the likelihood evaluator using active shape models, while very strong at precise fits, struggled with general alignment to the CT image on a larger scale: It would align the bone to the closest shape it could find, even if that was not in fact the corresponding side of the bone contour. To avoid this problem we wanted to lead with a Markov chain using landmark correspondence in the likelihood evaluator which would get the model aligned properly next to the bone contour. After that, we would follow up with the active shape model evaluator which should then closely fit the model to the contours. This approach worked very well in practice. The landmark evaluator helped to avoid or break out of local minima while the active shape model helped to get a very close fit.
+
+Finally, we also tested using a combination of both likelihood evaluators, however, it did not lead to any improvement for the results and was hence discarded from the current configuration.
+
+\subsection{Proposals}
+The plan for our proposals was to expand on the idea of multiple sequential Markov chains explained above: Some of the proposals are more useful during a fitting process on a larger scale while some are better suited for fitting on a small scale. We tested a number of different configurations for the parameters involved in the proposals, \ie the combination of different proposals with different standard deviations. The configuration shown in the results proved to give the best results. Generally, it makes sense to use larger standard deviations early on and set them to continually smaller values. Furthermore, we put a larger emphasis on rotation and translation during the first chain and gradually shifted the focus to shape transformations.
+
+\subsection{Test Fit}
+The average distance results for our test fits are very strong, with an average of 0.56 millimetres. This shows that the procedure worked very well overall. Looking at the meshes, we see that one problem that can sometimes occur is that the model gets stuck in a local minimum, especially at parts of the bone where the CT image shows an adjacent bone very close to the femur. \autoref{fig:testfit} shows examples of this problem, one where the model was able to escape the local minimum, and one where it got stuck to the wrong bone contour. This implies that the procedure itself is able to handle such problems, but might require further optimisation of the configuration to do so consistently.
+\todoRevise{Automated Landmarks}
+\todoRevise{Iterations make it worse?}
+
+\subsection{Target Fit}
+\autoref{fig:targetfit} shows that the procedure appears to be working for the target CT images as well, as the model is tightly fit to the image contours.
+\todoRevise{Landmark Noise}
