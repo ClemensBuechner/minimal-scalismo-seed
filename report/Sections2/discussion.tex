@@ -15,9 +15,6 @@ The plan for our proposals was to expand on the idea of multiple sequential Mark
 
 \subsection{Test Fit}
 The average distance results for our test fits are very strong, with an average of 0.56 millimetres. This shows that the procedure worked very well overall. Looking at the meshes, we see that one problem that can sometimes occur is that the model gets stuck in a local minimum, especially at parts of the bone where the CT image shows an adjacent bone very close to the femur. \autoref{fig:testfit} shows examples of this problem, one where the model was able to escape the local minimum, and one where it got stuck to the wrong bone contour. This implies that the procedure itself is able to handle such problems, but might require further optimisation of the configuration to do so consistently.
-\todoRevise{Automated Landmarks}
-\todoRevise{Iterations make it worse?}
 
 \subsection{Target Fit}
-\autoref{fig:targetfit} shows that the procedure appears to be working for the target CT images as well, as the model is tightly fit to the image contours.
-\todoRevise{Landmark Noise}
+\autoref{fig:targetfit} shows that the procedure appears to be working for the target CT images as well, as the model is tightly fit to the image contours. An option we considered was to increase the landmark noise variance for this part as we could not double check clicked landmarks on the ground truth mesh, but ultimately, this did not seem necessary due to the many iterations of the procedure afterwards.
