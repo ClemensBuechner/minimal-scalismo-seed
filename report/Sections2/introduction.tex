@@ -1,4 +1,12 @@
 \section{Introduction}
 \label{sec:intro}
 
-\todoMissing{Write introduction}
+Locating objects and boundaries in an image is called image segmentation.
+Medical institutions use it for diagnosing internal diseases (\eg, locating tumors) on CT or MRI images.
+Analyzing such images by hand is very costly and requires expert knowledge.
+Automating the task could reduce expenses and save time and resources.
+
+In this project, we implemented such an algorithm to fit a femur model to 3-D CT images.
+The approach works with Markov Chain Monte Carlo (MCMC) methods to sample model instances.
+The quality of the samples subject to the image is then evaluated using Active Shape Models (ASM).
+In the end, the sample which fits the data best is chosen as shape estimate of the scanned bone.
