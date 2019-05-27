@@ -1,27 +1,15 @@
 \section{Results}
 \label{sec:results}
 
-\todoMissing{Input actual values}
-
 In this section we present the outcome of our implementation.
 
-%% --------------------------------------------
-\subsection{Landmarks}
-\label{subsec:landmarks}
 
-We have manually clicked ten landmarks on our femora, with a focus on prominent parts, such as the condyles or trochanters, that are easily recognisable even with use of only the CT image when the ground truth model is inevitably unavailable. This lead to 6 landmarks on the lower part and 4 landmarks on the head.
 
 %% --------------------------------------------
 
 \subsection{Markov Chains}
 \label{subsec:markovchains}
-We used three Markov Chains, each for 5000 iterations, with the following likelihood evaluators:
-
-\begin{enumerate}
-	\item Chain 1: Landmark Likelihood Evaluator
-	\item Chain 2: Active Shape Model Likelihood Evaluator
-	\item Chain 3: Active Shape Model Likelihood Evaluator
-\end{enumerate}
+We ran each of our Markov chains over 5000 iterations.
 
 %% --------------------------------------------
 

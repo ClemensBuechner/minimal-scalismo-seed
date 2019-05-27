@@ -1,4 +1,16 @@
 \section{Methods}
 \label{sec:methods}
 
-\todoMissing{Write methods}
+%% --------------------------------------------
+\subsection{Landmarks}
+\label{subsec:landmarks}
+
+We have manually clicked ten landmarks on our femora, with a focus on prominent parts, such as the condyles or trochanters, that are easily recognisable even with use of only the CT image when the ground truth model is inevitably unavailable. This lead to 6 landmarks on the lower part and 4 landmarks on the head.
+
+\subsection{Markov Chains}
+\label{subsec:markovchains}
+
+We used three Markov chains sequentially. For the first one, we used our manually clicked landmarks for the likelihood evaluator. The second and the third chain used an Active Shape Model evaluator. We always used the best sample from the previous chain based on the maximum posterior as determined by the Active Shape Model evaluator, even after the landmark based chain.
+
+We used and tested different combinations of shape update, rotation, and translation proposals. We also used multiple proposals for shape updates with varying standard deviations.
+\todoRevise{Elaborate on LM/ASM evaluators?}
