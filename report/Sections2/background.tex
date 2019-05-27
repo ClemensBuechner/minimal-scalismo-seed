@@ -1,4 +1,26 @@
 \section{Background}
 \label{sec:background}
 
-\todoMissing{Write background}
+This section introduces the main concepts used to implement our fitting process.
+From all concepts learned in the lecture, the final implementation only uses MCMC and ASM.
+
+%% --------------------------------------------
+
+\subsection{Markov Chain Monte Carlo}
+\label{subsec:mcmc}
+
+The idea driving MCMC is to sample instances of the shape to approach the underlying true shape.
+The algorithm used is called \emph{Metropolis Hastings algorithm}.
+It starts each iteration with the last accepted sample and generates a perturbation of it.
+The new proposal is then evaluated based on a function estimating its log probability.
+The perturbation can be accepted or rejected by the algorithm based on its likelihood ratio when compared with the original sample.
+Then, the algorithm will move on to the next iteration.
+
+%% --------------------------------------------
+
+\subsection{Active Shape Models}
+\label{subsec:asm}
+
+In our context, an ASM is the combination of a statistical shape model (SSM) and an intensity model.
+The latter provides a set of probability distributions representing the intensity variations corresponding to points on the SSM.
+We refer to them as profiles.
