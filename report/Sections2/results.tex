@@ -31,5 +31,15 @@ The results of these evaluations can be found in \autoref{tbl:testfit}.
 We first optimized the parameters with respect to the test data.
 Afterwards, we went on applying the approach to another 5 target images without ground truth.
 For these, only a visual evaluation was done, as ground truth is necessary to calculate mesh distances.
-One instance of the fitted result can be found in \todoMissing{Add figure and reference}.
+One instance of the fitted result can be found in \autoref{fig:fit}.
 No alarming discrepancy from the CT contours was found among all targets.
+
+\begin{figure*}
+  \centering
+  \includegraphics[width=\textwidth]{./Figures/mcmc_fit}
+  \caption{
+    The red contour shows the femur model fitted to the CT image in the background by our algorithm. 
+    The ground truth is displayed in green to visualize the quality of the result.
+  }
+  \label{fig:fit}
+\end{figure*}
