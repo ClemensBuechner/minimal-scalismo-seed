@@ -23,8 +23,8 @@ Our approach uses three Markov chains sequentially.
 Each of them does 5000 iterations passing the best sample according to an ASM evaluator as initial sample to the subsequent chain.
 
 For the first one, we used our manually clicked landmarks together with a shape likelihood evaluator.
+From then on, we used ASM profiles for the likelihood evaluation.
 While the second chain favors proposals with a larger step size, the third tries to improve the fit with smaller changes.
-\todoRevise{Mention asm evaluator?}
 
 We used and tested different combinations of mixture proposals consisting of proposals for shape, rotation, and translation updates. 
 The parameters of our final proposals can be found in \autoref{tbl:proposals}. 
