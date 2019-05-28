@@ -1,6 +1,24 @@
 \section{Conclusion}
 \label{sec:conclusion}
 
-\todoMissing{Write conclusion}
-\todoNote{Automate Landmark clicking/checking}
-\todoNote{Run large scale experiments for better parameters}
+We have described our approach to fit a femur model to 3-D CT images.
+In a first step, we used manually clicked landmarks to stretch the model to the large-scale structure of the target shape.
+We used MCMC and the Metropolis Hastings algorithm as iterative procedure to do so.
+In a second step, we used ASM together with MCMC to get better shape samples.
+The results show that the approach yields appropriate results with an average distance of 0.56 millimeters from the ground truth.
+
+The process automates the task of image segmentation and can save time and resources.
+Our pipeline could be used as basis for further improving the results.
+As we have faced problems with some wrongly clicked landmarks, we see potential in automating that process as well.
+Also, finding well suited parameters for all the proposals could be done with a machine learning approach to increase productivity.
+
+The problem of getting stuck in local minima should be avoided when increasing the number of iterations.
+However, with our implementation the results got worse when simply increasing the number of iterations.
+We have not yet found whether this behavior is the result of a bug in our code or is a phenomena of the random seeds we chose.
+It could be crucial to find the source of this behavior to increase the quality of our results.
+
+We have also tried some runs alternating doing some samples of the ASM chain with larger steps and the ASM chain with smaller steps.
+However, the measured average distance decreased insignificantly compared to the time spent for the additional rounds.
+Thus, the idea was not investigated any further.
+
+\todoRevise{Maybe add some paragraph to make the conclusion more complete?}
