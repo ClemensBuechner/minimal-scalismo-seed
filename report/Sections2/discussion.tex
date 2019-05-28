@@ -1,24 +1,25 @@
 \section{Discussion}
 \label{sec:discussion}
 
-We can evaluate the performance of our approach based on the two main results: the average distance from the test fit to the ground truth data and visually analyzing the images of the test or target fit to the CT image. 
+
+We have considered two ways to evaluate the performance of our approach: computing the average distance from the test fit to the ground truth data and visually analyzing the test or target fit on the CT image. 
 
 %% --------------------------------------------
 
 \subsection{Likelihood Evaluators}
 \label{subsec:evaluators}
 
-Applying multiple Markov chains in sequence was the consequence of a problem faced early in the project.
+Applying multiple Markov chains in sequence was the attempt at a solution to a problem faced early in the project.
 While very strong at precise fits, ASM struggled with general alignment to the CT image on a larger scale: It would align the model to the nearest occurrences of tissue, even if that was not the corresponding part of the bone contour.
 To avoid this local optimum, we introduced the leading Markov chain using landmark correspondence in the likelihood evaluator.
-This would get the model align roughly to the bone contour. 
+This would get the model to align roughly to the bone contour. 
 
 After that, we would follow up with the active shape model evaluator which should then closely fit the model to the contours. 
-This approach worked very well in practice. 
-The landmark evaluator definitely helped to avoid or break out of local minima while the active shape model helped to get a very close fit.
+This approach worked very well. 
+The landmark evaluator helped to avoid or break out of local minima while the active shape model helped to get a very close fit.
 
-Both our evaluators are product evaluators including the prior probability either with the landmarks fit or the profiles.
-We also tried adding the landmarks evaluator to the product for the second and third chain.
+Both our evaluators are product evaluators including the prior probability either with the landmarks' fit or the profiles.
+We also tried adding the landmarks' evaluator to the product for the second and third chain.
 However, this did not lead to any improvement in our result and the change was hence discarded from the final configuration.
 
 %% --------------------------------------------
@@ -28,8 +29,11 @@ However, this did not lead to any improvement in our result and the change was h
 
 The plan for our proposals was to expand on the idea of multiple sequential Markov chains explained in Section~\ref{subsec:evaluators}: Some of the proposals are more useful during a fitting process on a larger scale while some are better suited for fitting on a small scale. 
 We tested a number of different configurations for the parameters involved in the proposals, \ie, the combination of different proposals with different standard deviations. 
-The configuration shown in Section~\ref{sec:results} provided the best results among all our experiments. 
-Generally, it makes sense to use larger standard deviations early on and set them to continually smaller values. 
+The configuration shown in Section~\ref{sec:results} provided the best results among all of our experiments. 
+
+Generally, it is sensible to use larger standard deviations early on and set them to continually smaller values.
+This way, we take larger steps in the beginning and go on fitting details of the shape towards the end.
+
 Furthermore, we put a larger emphasis on rotation and translation during the first chain and gradually shifted the focus to shape transformations.
 
 %% --------------------------------------------
@@ -37,13 +41,13 @@ Furthermore, we put a larger emphasis on rotation and translation during the fir
 \subsection{Test Fit}
 \label{subsec:testfit}
 
-The average distance results for our test fits are very strong, with an average of 0.56 millimeters. 
-We considered this difference to the ground truth to be reasonably small, leading to the conclusion that the procedure worked very well overall. 
+The average distance of 0.56 millimeters for our test fits is a satisfying result.
+We considered this difference to the ground truth to be reasonably small, leading to the conclusion that the procedure works reliably overall. 
 
-When looking at the meshes, we see that one problem that can sometimes occur is that the model gets stuck in a local minimum.
-This risk is especially high at parts of the CT image where an adjacent bone is very close to the femur. 
-On the left hand side of \autoref{fig:testfit} we see an example where the algorithm converges the true shape, but it is evident that only small variations could move the femur head towards the contour of the pelvis.
-The right hand side shows the same fit some slices further on top of the femur head, where the model got stuck in the contour of this adjacent bone.
+When looking at the meshes, we see that the model sometimes gets stuck in a local minimum.
+This risk is especially high at parts of the CT image where an adjacent bone is particularly close to the femur. 
+On the left hand side of \autoref{fig:testfit} we see an example where the algorithm converges the true shape, but it is evident that small variations can move the femur head towards the contour of the pelvis.
+The right hand side shows the same fit a few slices further on top of the femur head, where the model got stuck in the contour of this adjacent bone.
 Further optimization would be necessary to escape such local optima consistently.
 
 \begin{figure}
