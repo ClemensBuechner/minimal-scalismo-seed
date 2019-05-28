@@ -26,7 +26,7 @@ For the first one, we used our manually clicked landmarks together with a shape 
 From then on, we used ASM profiles for the likelihood evaluation.
 While the second chain favors proposals with a larger step size, the third tries to improve the fit with smaller changes.
 
-We used and tested different combinations of mixture proposals consisting of proposals for shape, rotation, and translation updates. 
+We used and tested different combinations of mixture proposals consisting of shape update, rotation, and translation proposals. 
 The parameters of our final proposals can be found in \autoref{tbl:proposals}. 
 In \autoref{tbl:markovchains} we show the probability of choosing each proposal in the mixture proposals.
 
@@ -60,7 +60,7 @@ In \autoref{tbl:markovchains} we show the probability of choosing each proposal 
       Chain 2 &
       Chain 3 \\
     \midrule
-      Tiny Shape & - & 0.00 & 0.20 \\
+      Tiny Shape & - & - & 0.20 \\
       Small Shape & 0.10 & 0.30 & 0.50 \\
       Medium Shape & 0.20 & 0.40 & 0.20 \\
       Large Shape & 0.10 & 0.10 & - \\
