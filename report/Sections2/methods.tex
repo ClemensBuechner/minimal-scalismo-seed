@@ -1,16 +1,70 @@
 \section{Methods}
 \label{sec:methods}
 
+In the following sections we describe the methods used for our approach.
+
 %% --------------------------------------------
+
 \subsection{Landmarks}
 \label{subsec:landmarks}
 
-We have manually clicked ten landmarks on our femora, with a focus on prominent parts, such as the condyles or trochanters, that are easily recognisable even with use of only the CT image when the ground truth model is inevitably unavailable. This lead to 6 landmarks on the lower part and 4 landmarks on the head.
+We have manually clicked ten landmarks on each femora instance: model and CT images.
+All landmarks lie on prominent parts of the bone, such as the condyles or trochanters.
+These are easily recognizable even if the ground truth is unavailable.
+They are to be found as first occurrence of tissue when sliding through cuts of the bone in either $x$, $y$, or $z$-direction. 
+We have used 6 landmarks on the lower part and 4 landmarks on the femur head.
+
+%% --------------------------------------------
 
 \subsection{Markov Chains}
 \label{subsec:markovchains}
 
-We used three Markov chains sequentially. For the first one, we used our manually clicked landmarks for the likelihood evaluator. The second and the third chain used an Active Shape Model evaluator. We always used the best sample from the previous chain based on the maximum posterior as determined by the Active Shape Model evaluator, even after the landmark based chain.
+Our approach uses three Markov chains sequentially. 
+Each of them does 5000 iterations passing the best sample according to an ASM evaluator as initial sample to the subsequent chain.
 
-We used and tested different combinations of shape update, rotation, and translation proposals. We also used multiple proposals for shape updates with varying standard deviations.
-\todoRevise{Elaborate on LM/ASM evaluators?}
+For the first one, we used our manually clicked landmarks together with a shape likelihood evaluator.
+While the second chain favors proposals with a larger step size, the third tries to improve the fit with smaller changes.
+
+We used and tested different combinations of mixture proposals consisting of shape update, rotation, and translation proposals. 
+The parameters of our final proposals can be found in \autoref{tbl:proposals}. 
+In \autoref{tbl:markovchains} we show the probability of choosing each proposal in the mixture proposals.
+
+\begin{table}
+  \centering
+  \caption{Proposals used by our Markov Chains}
+  \label{tbl:proposals}
+  \begin{tabular}{lr}
+    \toprule
+      \textbf{Update Proposal} &
+      Standard Deviation \\
+    \midrule
+      Tiny Shape & 0.02 \\
+      Small Shape & 0.05 \\
+      Medium Shape & 0.10 \\
+      Large Shape & 0.30 \\
+      Rotation & 0.01 \\
+      Translation & 1.00 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}
+  \centering
+  \caption{Weight combinations of proposals for the Markov Chains}
+  \label{tbl:markovchains}
+  \begin{tabular}{lrrr}
+    \toprule
+      \textbf{Update Proposal} &
+      Chain 1 &
+      Chain 2 &
+      Chain 3 \\
+    \midrule
+      Tiny Shape & - & 0.00 & 0.20 \\
+      Small Shape & 0.10 & 0.30 & 0.50 \\
+      Medium Shape & 0.20 & 0.40 & 0.20 \\
+      Large Shape & 0.10 & 0.10 & - \\
+      Rotation & 0.30 & 0.10 & 0.05 \\
+      Translation & 0.30 & 0.10 & 0.05 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
