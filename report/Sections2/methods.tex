@@ -24,8 +24,9 @@ Each of them does 5000 iterations passing the best sample according to an ASM ev
 
 For the first one, we used our manually clicked landmarks together with a shape likelihood evaluator.
 While the second chain favors proposals with a larger step size, the third tries to improve the fit with smaller changes.
+\todoRevise{Mention asm evaluator?}
 
-We used and tested different combinations of mixture proposals consisting of shape update, rotation, and translation proposals. 
+We used and tested different combinations of mixture proposals consisting of proposals for shape, rotation, and translation updates. 
 The parameters of our final proposals can be found in \autoref{tbl:proposals}. 
 In \autoref{tbl:markovchains} we show the probability of choosing each proposal in the mixture proposals.
 
